@@ -68,3 +68,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
 # Asegurar que escucha en 0.0.0.0 para ser accesible desde fuera del contenedor
 # Usar variables de entorno para flexibilidad, pero con valores por defecto seguros
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Djava.security.egd=file:/dev/./urandom -Dserver.address=${SERVER_ADDRESS:-0.0.0.0} -Dserver.port=${SERVER_PORT:-8081} -jar app.jar"]
+
