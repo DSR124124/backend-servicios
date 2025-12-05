@@ -1,0 +1,10 @@
+package com.nettalco.backendservicios.modules.transporte.dtos;
+
+import java.time.OffsetDateTime;
+
+public record GPSIngestaResponse(
+    Long idTracking,
+    Integer idViaje,
+    OffsetDateTime fechaRegistro,
+    String mensaje
+) {}
