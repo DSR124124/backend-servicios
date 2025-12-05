@@ -2,6 +2,7 @@ package com.nettalco.backendservicios.modules.transporte.controllers;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.*;
 import com.nettalco.backendservicios.core.security.UserDetails;
+import com.nettalco.backendservicios.modules.transporte.dtos.ProximoParaderoResponse;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -168,7 +169,8 @@ public class ConductorController {
     }
     
     /**
-     * Marca la llegada del conductor a un paradero durante el viaje
+     * Marca la llegada del conductor a un paradero durante el viaje.
+     * Los paraderos deben marcarse en orden secuencial (1, 2, 3...).
      * Endpoint: POST /api/conductor/viaje/{idViaje}/paradero/{idParadero}/llegada
      */
     @PostMapping("/viaje/{idViaje}/paradero/{idParadero}/llegada")
@@ -204,6 +206,30 @@ public class ConductorController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Error al registrar llegada al paradero: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtiene el próximo paradero a visitar en el viaje activo.
+     * Útil para la navegación del conductor - siempre devuelve el siguiente
+     * paradero pendiente en orden.
+     * Endpoint: GET /api/conductor/viaje/{idViaje}/proximo-paradero
+     */
+    @GetMapping("/viaje/{idViaje}/proximo-paradero")
+    public ResponseEntity<?> obtenerProximoParadero(@PathVariable("idViaje") Integer idViaje) {
+        try {
+            Integer idConductor = obtenerIdConductor();
+            ProximoParaderoResponse response = viajeService.obtenerProximoParadero(idViaje, idConductor);
+            return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener el proximo paradero: " + e.getMessage()));
         }
     }
 }

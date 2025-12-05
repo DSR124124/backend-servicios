@@ -44,4 +44,23 @@ public interface LlegadaParaderoRepository extends JpaRepository<LlegadaParadero
            "WHERE l.viaje.idViaje = :idViaje " +
            "ORDER BY l.fechaLlegada DESC")
     List<LlegadaParadero> findUltimaLlegadaByViajeId(@Param("idViaje") Integer idViaje);
+    
+    /**
+     * Obtiene el máximo orden de paradero visitado para un viaje.
+     * Retorna null si no hay paraderos visitados.
+     */
+    @Query("SELECT MAX(l.paradero.orden) FROM LlegadaParadero l " +
+           "WHERE l.viaje.idViaje = :idViaje")
+    Integer findMaxOrdenVisitadoByViajeId(@Param("idViaje") Integer idViaje);
+    
+    /**
+     * Verifica si existe una llegada registrada para un paradero con un orden específico
+     */
+    @Query("SELECT COUNT(l) > 0 FROM LlegadaParadero l " +
+           "WHERE l.viaje.idViaje = :idViaje " +
+           "AND l.paradero.orden = :orden")
+    boolean existsByViajeIdAndOrden(
+        @Param("idViaje") Integer idViaje,
+        @Param("orden") Integer orden
+    );
 }

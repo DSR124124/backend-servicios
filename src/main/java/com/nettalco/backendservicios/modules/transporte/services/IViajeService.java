@@ -6,6 +6,7 @@ import com.nettalco.backendservicios.modules.transporte.dtos.FinalizarViajeRespo
 import com.nettalco.backendservicios.modules.transporte.dtos.HistorialViajeResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.IniciarViajeResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.LlegadaParaderoResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ProximoParaderoResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConductorResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoResponse;
@@ -67,7 +68,8 @@ public interface IViajeService {
     EstadisticasConductorResponse obtenerEstadisticas(Integer idConductor);
     
     /**
-     * Marca la llegada del conductor a un paradero durante el viaje
+     * Marca la llegada del conductor a un paradero durante el viaje.
+     * Los paraderos deben marcarse en orden secuencial.
      */
     LlegadaParaderoResponse marcarLlegadaParadero(
         Integer idViaje, 
@@ -76,4 +78,10 @@ public interface IViajeService {
         BigDecimal latitud,
         BigDecimal longitud
     );
+    
+    /**
+     * Obtiene información del próximo paradero a visitar en el viaje.
+     * Útil para la navegación del conductor.
+     */
+    ProximoParaderoResponse obtenerProximoParadero(Integer idViaje, Integer idConductor);
 }

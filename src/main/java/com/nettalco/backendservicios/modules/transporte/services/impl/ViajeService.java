@@ -2,6 +2,7 @@ package com.nettalco.backendservicios.modules.transporte.services.impl;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.*;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse.RoutePointResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConductorResponse.ParaderoInfo;
 import com.nettalco.backendservicios.modules.transporte.entities.*;
 import com.nettalco.backendservicios.modules.transporte.repositories.*;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;
@@ -262,16 +263,34 @@ public class ViajeService implements IViajeService {
         String nombreRuta = viaje.getRuta() != null ? viaje.getRuta().getNombre() : "";
         String descripcionRuta = viaje.getRuta() != null ? viaje.getRuta().getDescripcion() : "";
         
+        // Obtener el máximo orden visitado para determinar el estado de cada paradero
+        Integer maxOrdenVisitado = llegadaParaderoRepository.findMaxOrdenVisitadoByViajeId(viaje.getIdViaje());
+        int ultimoOrdenVisitado = (maxOrdenVisitado == null) ? 0 : maxOrdenVisitado;
+        
         List<ViajeActivoConductorResponse.ParaderoInfo> paraderos = List.of();
         if (viaje.getRuta() != null && viaje.getRuta().getPuntos() != null) {
             paraderos = viaje.getRuta().getPuntos().stream()
                 .sorted(Comparator.comparing(RutaPunto::getOrden))
-                .map(punto -> new ViajeActivoConductorResponse.ParaderoInfo(
-                    punto.getOrden(),
-                    punto.getNombreParadero(),
-                    punto.getLatitud() != null ? punto.getLatitud().doubleValue() : null,
-                    punto.getLongitud() != null ? punto.getLongitud().doubleValue() : null
-                ))
+                .map(punto -> {
+                    // Determinar el estado del paradero
+                    String estadoParadero;
+                    if (punto.getOrden() <= ultimoOrdenVisitado) {
+                        estadoParadero = "visitado";
+                    } else if (punto.getOrden() == ultimoOrdenVisitado + 1) {
+                        estadoParadero = "siguiente"; // Es el próximo a visitar
+                    } else {
+                        estadoParadero = "pendiente";
+                    }
+                    
+                    return new ViajeActivoConductorResponse.ParaderoInfo(
+                        punto.getIdPunto(),
+                        punto.getOrden(),
+                        punto.getNombreParadero(),
+                        punto.getLatitud() != null ? punto.getLatitud().doubleValue() : null,
+                        punto.getLongitud() != null ? punto.getLongitud().doubleValue() : null,
+                        estadoParadero
+                    );
+                })
                 .collect(Collectors.toList());
         }
         
@@ -287,7 +306,9 @@ public class ViajeService implements IViajeService {
             viaje.getFechaInicioProgramada(),
             viaje.getFechaFinProgramada(),
             viaje.getFechaInicioReal(),
-            paraderos
+            paraderos,
+            ultimoOrdenVisitado,
+            viaje.getRuta() != null && viaje.getRuta().getPuntos() != null ? viaje.getRuta().getPuntos().size() : 0
         );
     }
     
@@ -455,6 +476,25 @@ public class ViajeService implements IViajeService {
                 "Ya se registro la llegada a este paradero.");
         }
         
+        // =====================================================
+        // Validación de orden secuencial - NUEVO
+        // =====================================================
+        Integer maxOrdenVisitado = llegadaParaderoRepository.findMaxOrdenVisitadoByViajeId(idViaje);
+        int siguienteOrdenEsperado = (maxOrdenVisitado == null) ? 1 : maxOrdenVisitado + 1;
+        
+        if (!paradero.getOrden().equals(siguienteOrdenEsperado)) {
+            // Buscar el nombre del siguiente paradero esperado
+            String nombreParaderoEsperado = viaje.getRuta().getPuntos().stream()
+                .filter(p -> p.getOrden().equals(siguienteOrdenEsperado))
+                .findFirst()
+                .map(RutaPunto::getNombreParadero)
+                .orElse("Paradero #" + siguienteOrdenEsperado);
+            
+            throw new IllegalArgumentException(
+                "Debes marcar los paraderos en orden. El siguiente paradero es: " + nombreParaderoEsperado + 
+                " (orden " + siguienteOrdenEsperado + ")");
+        }
+        
         OffsetDateTime ahora = OffsetDateTime.now();
         LlegadaParadero llegada = new LlegadaParadero();
         llegada.setViaje(viaje);
@@ -495,6 +535,64 @@ public class ViajeService implements IViajeService {
             paraderosVisitados,
             totalParaderos,
             esUltimoParadero,
+            mensaje
+        );
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public ProximoParaderoResponse obtenerProximoParadero(Integer idViaje, Integer idConductor) {
+        Viaje viaje = viajeRepository.findByIdAndConductor(idViaje, idConductor)
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Viaje no encontrado o no tienes permiso para verlo."));
+        
+        if (!"en_curso".equals(viaje.getEstado())) {
+            throw new IllegalArgumentException(
+                "El viaje no esta en curso. Estado actual: " + viaje.getEstado());
+        }
+        
+        int totalParaderos = viaje.getRuta().getPuntos().size();
+        Integer maxOrdenVisitado = llegadaParaderoRepository.findMaxOrdenVisitadoByViajeId(idViaje);
+        int paraderosVisitados = (maxOrdenVisitado == null) ? 0 : maxOrdenVisitado;
+        int siguienteOrden = paraderosVisitados + 1;
+        
+        // Verificar si ya se visitaron todos los paraderos
+        if (paraderosVisitados >= totalParaderos) {
+            return new ProximoParaderoResponse(
+                idViaje,
+                null,
+                null,
+                null,
+                null,
+                null,
+                paraderosVisitados,
+                totalParaderos,
+                true,
+                "Todos los paraderos han sido visitados. Puedes finalizar el viaje."
+            );
+        }
+        
+        // Buscar el siguiente paradero
+        RutaPunto proximoParadero = viaje.getRuta().getPuntos().stream()
+            .filter(p -> p.getOrden().equals(siguienteOrden))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException(
+                "No se encontro el paradero con orden " + siguienteOrden));
+        
+        String mensaje = paraderosVisitados == 0 
+            ? "Primer paradero de la ruta. ¡Inicia el recorrido!"
+            : "Siguiente paradero en la ruta.";
+        
+        return new ProximoParaderoResponse(
+            idViaje,
+            proximoParadero.getIdPunto(),
+            proximoParadero.getOrden(),
+            proximoParadero.getNombreParadero(),
+            proximoParadero.getLatitud() != null ? proximoParadero.getLatitud().doubleValue() : null,
+            proximoParadero.getLongitud() != null ? proximoParadero.getLongitud().doubleValue() : null,
+            paraderosVisitados,
+            totalParaderos,
+            false,
             mensaje
         );
     }
