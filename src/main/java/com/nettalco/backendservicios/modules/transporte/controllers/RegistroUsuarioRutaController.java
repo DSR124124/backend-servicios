@@ -39,7 +39,8 @@ public class RegistroUsuarioRutaController {
     }
     
     /**
-     * Registra la selección de ruta y paradero por un usuario
+     * Registra o actualiza la selección de ruta y paradero por un usuario
+     * Si ya existe un registro con la misma ruta y paradero, lo actualiza en lugar de crear duplicado
      * Endpoint: POST /api/registro-ruta
      * Requiere autenticación JWT
      */
@@ -58,6 +59,32 @@ public class RegistroUsuarioRutaController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Error al registrar ruta y paradero: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtiene el último registro de ruta y paradero del usuario autenticado
+     * Endpoint: GET /api/registro-ruta/ultimo
+     * Requiere autenticación JWT
+     */
+    @GetMapping("/ultimo")
+    public ResponseEntity<?> obtenerUltimoRegistro() {
+        try {
+            Integer idUsuario = obtenerIdUsuario();
+            java.util.Optional<RegistroUsuarioRutaResponse> registro = registroService.obtenerUltimoRegistro(idUsuario);
+            
+            if (registro.isPresent()) {
+                return ResponseEntity.ok(registro.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("mensaje", "No se encontró ningún registro para este usuario"));
+            }
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener el último registro: " + e.getMessage()));
         }
     }
 }
