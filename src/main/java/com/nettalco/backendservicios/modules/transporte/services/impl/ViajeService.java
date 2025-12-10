@@ -2,7 +2,6 @@ package com.nettalco.backendservicios.modules.transporte.services.impl;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.*;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse.RoutePointResponse;
-import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConductorResponse.ParaderoInfo;
 import com.nettalco.backendservicios.modules.transporte.entities.*;
 import com.nettalco.backendservicios.modules.transporte.repositories.*;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;

@@ -12,27 +12,15 @@ import java.util.List;
 @Repository
 public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsuarioRuta, Integer> {
     
-    /**
-     * Obtiene los registros de un usuario ordenados por fecha descendente
-     */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
     List<RegistroUsuarioRuta> findByUsuarioIdOrderByFechaDesc(@Param("idUsuario") Integer idUsuario);
     
-    /**
-     * Obtiene los registros de una ruta específica
-     */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.ruta.idRuta = :idRuta ORDER BY r.fechaRegistro DESC")
     List<RegistroUsuarioRuta> findByRutaIdOrderByFechaDesc(@Param("idRuta") Integer idRuta);
     
-    /**
-     * Obtiene los registros de un paradero específico
-     */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.paradero.idPunto = :idParadero ORDER BY r.fechaRegistro DESC")
     List<RegistroUsuarioRuta> findByParaderoIdOrderByFechaDesc(@Param("idParadero") Integer idParadero);
     
-    /**
-     * Cuenta los registros de un usuario en un rango de fechas
-     */
     @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario " +
            "AND r.fechaRegistro >= :fechaDesde AND r.fechaRegistro <= :fechaHasta")
     Long countByUsuarioAndFechaBetween(
@@ -41,15 +29,9 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
         @Param("fechaHasta") OffsetDateTime fechaHasta
     );
     
-    /**
-     * Obtiene el último registro de un usuario (el más reciente)
-     */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
     java.util.List<RegistroUsuarioRuta> findUltimosRegistrosByUsuarioId(@Param("idUsuario") Integer idUsuario);
     
-    /**
-     * Busca un registro existente del usuario (para actualizar en lugar de crear duplicado)
-     */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario " +
            "AND r.ruta.idRuta = :idRuta AND r.paradero.idPunto = :idParadero " +
            "ORDER BY r.fechaRegistro DESC")

@@ -33,21 +33,16 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             Integer idUsuario, 
             RegistroUsuarioRutaRequest request) {
         
-        // Validar que la ruta existe
         Ruta ruta = rutaRepository.findById(request.getIdRuta())
             .orElseThrow(() -> new IllegalArgumentException("La ruta con ID " + request.getIdRuta() + " no existe"));
         
-        // Validar que el paradero existe
         RutaPunto paradero = rutaPuntoRepository.findById(request.getIdParadero())
             .orElseThrow(() -> new IllegalArgumentException("El paradero con ID " + request.getIdParadero() + " no existe"));
         
-        // Validar que el paradero pertenece a la ruta
         if (!paradero.getRuta().getIdRuta().equals(ruta.getIdRuta())) {
             throw new IllegalArgumentException("El paradero no pertenece a la ruta seleccionada");
         }
         
-        // Buscar si ya existe un registro del mismo usuario con la misma ruta y paradero
-        // Si existe, lo actualizamos en lugar de crear uno nuevo
         java.util.List<RegistroUsuarioRuta> registrosExistentes = registroRepository.findRegistrosExistentes(
             idUsuario, 
             request.getIdRuta(), 
@@ -57,20 +52,17 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             ? new RegistroUsuarioRuta() 
             : registrosExistentes.get(0);
         
-        // Si es un registro nuevo, establecer el usuario
         if (registro.getIdRegistro() == null) {
             registro.setIdUsuario(idUsuario);
         }
         
-        // Actualizar los datos (o establecer si es nuevo)
         registro.setRuta(ruta);
         registro.setParadero(paradero);
-        registro.setFechaRegistro(OffsetDateTime.now()); // Actualizar fecha al momento de la actualización
+        registro.setFechaRegistro(OffsetDateTime.now());
         registro.setObservacion(request.getObservacion());
         
         RegistroUsuarioRuta registroGuardado = registroRepository.save(registro);
         
-        // Construir respuesta
         String mensaje = registro.getIdRegistro() == null 
             ? "Registro de ruta y paradero guardado exitosamente"
             : "Registro de ruta y paradero actualizado exitosamente";
@@ -96,7 +88,7 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             return java.util.Optional.empty();
         }
         
-        RegistroUsuarioRuta registro = registros.get(0); // El primero es el más reciente
+        RegistroUsuarioRuta registro = registros.get(0);
         Ruta ruta = registro.getRuta();
         RutaPunto paradero = registro.getParadero();
         

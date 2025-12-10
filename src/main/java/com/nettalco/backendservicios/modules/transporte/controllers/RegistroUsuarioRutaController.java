@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-/**
- * Controller para registrar la selección de ruta y paradero por usuarios.
- * Requiere autenticación JWT.
- */
 @RestController
 @RequestMapping("/api/registro-ruta")
 @CrossOrigin(origins = "*")
@@ -26,9 +22,6 @@ public class RegistroUsuarioRutaController {
     @Autowired
     private IRegistroUsuarioRutaService registroService;
     
-    /**
-     * Obtiene el ID del usuario autenticado desde el JWT
-     */
     private Integer obtenerIdUsuario() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getDetails() instanceof UserDetails) {
@@ -38,12 +31,6 @@ public class RegistroUsuarioRutaController {
         throw new SecurityException("Usuario no autenticado");
     }
     
-    /**
-     * Registra o actualiza la selección de ruta y paradero por un usuario
-     * Si ya existe un registro con la misma ruta y paradero, lo actualiza en lugar de crear duplicado
-     * Endpoint: POST /api/registro-ruta
-     * Requiere autenticación JWT
-     */
     @PostMapping
     public ResponseEntity<?> registrarRutaParadero(@Valid @RequestBody RegistroUsuarioRutaRequest request) {
         try {
@@ -62,11 +49,6 @@ public class RegistroUsuarioRutaController {
         }
     }
     
-    /**
-     * Obtiene el último registro de ruta y paradero del usuario autenticado
-     * Endpoint: GET /api/registro-ruta/ultimo
-     * Requiere autenticación JWT
-     */
     @GetMapping("/ultimo")
     public ResponseEntity<?> obtenerUltimoRegistro() {
         try {

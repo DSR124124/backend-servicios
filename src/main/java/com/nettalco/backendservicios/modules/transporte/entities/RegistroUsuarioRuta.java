@@ -4,11 +4,6 @@ import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 
-/**
- * Entidad para registrar cuando un usuario selecciona una ruta y paradero
- * para usar el servicio de transporte. Esto permite análisis y estadísticas
- * de uso del sistema de transporte.
- */
 @Entity
 @Table(name = "registros_usuarios_rutas", indexes = {
     @Index(name = "idx_registro_usuario", columnList = "id_usuario"),
