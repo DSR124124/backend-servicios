@@ -124,7 +124,8 @@ public class ConductorDetalleController {
                 c -> c
             ));
         
-        // PASO 3: Combinar datos del backend-gestion con datos locales
+        // PASO 3: SOLO retornar conductores que YA están registrados en backend-servicios
+        // Filtrar solo los que tienen un registro en conductor_detalle
         List<ConductorCompletoResponse> conductoresCompletos = usuariosConductores.stream()
             .map(usuarioData -> {
                 Integer idUsuario = usuarioData.get("idUsuario") != null 
@@ -138,33 +139,20 @@ public class ConductorDetalleController {
                 // Obtener datos del conductor desde backend-servicios (si existe)
                 ConductorDetalle conductorDetalle = conductoresMap.get(idUsuario);
                 
+                // SOLO incluir si tiene registro en conductor_detalle
+                if (conductorDetalle == null) {
+                    return null; // Excluir conductores no registrados
+                }
+                
                 // Si hay filtro por estado, verificar
                 if (estado != null && !estado.isEmpty()) {
-                    if (conductorDetalle == null || !estado.equals(conductorDetalle.getEstado())) {
-                        return null; // Filtrar este conductor
+                    if (!estado.equals(conductorDetalle.getEstado())) {
+                        return null; // Filtrar este conductor por estado
                     }
                 }
                 
-                // Si existe conductor_detalle, usar esos datos, sino crear respuesta solo con datos de gestión
-                if (conductorDetalle != null) {
-                    return conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductorDetalle, token);
-                } else {
-                    // Conductor existe en gestión pero no tiene detalles en servicios
-                    // Crear respuesta solo con datos del backend-gestion
-                    return new ConductorCompletoResponse(
-                        idUsuario,
-                        null, // licenciaNumero
-                        null, // categoria
-                        null, // telefonoContacto
-                        null, // estado
-                        (String) usuarioData.get("username"),
-                        (String) usuarioData.get("email"),
-                        (String) usuarioData.get("nombreCompleto"),
-                        usuarioData.get("idRol") != null ? ((Number) usuarioData.get("idRol")).intValue() : null,
-                        (String) usuarioData.get("nombreRol"),
-                        usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : null
-                    );
-                }
+                // Retornar respuesta completa con datos del conductor registrado
+                return conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductorDetalle, token);
             })
             .filter(Objects::nonNull) // Filtrar nulls
             .collect(Collectors.toList());
@@ -201,6 +189,56 @@ public class ConductorDetalleController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Error al eliminar el conductor: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtiene los usuarios con rol "Conductor" que NO están registrados aún en backend-servicios
+     * Útil para el formulario de creación de conductores
+     */
+    @GetMapping("/usuarios-disponibles")
+    public ResponseEntity<List<Map<String, Object>>> obtenerUsuariosConductoresDisponibles(
+            HttpServletRequest request) {
+        String token = obtenerToken(request);
+        
+        if (token == null || token.trim().isEmpty()) {
+            logger.warn("Petición sin token JWT para obtener usuarios conductores disponibles");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Collections.emptyList());
+        }
+        
+        try {
+            // Obtener todos los usuarios con rol "Conductor" del backend-gestion
+            List<Map<String, Object>> usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
+            
+            if (usuariosConductores == null || usuariosConductores.isEmpty()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+            
+            // Obtener IDs de usuarios que YA están registrados como conductores
+            List<Integer> idsConductoresRegistrados = conductorDetalleRepository.findAll().stream()
+                .map(ConductorDetalle::getIdUsuarioGestion)
+                .collect(Collectors.toList());
+            
+            // Filtrar solo los usuarios que NO están registrados
+            List<Map<String, Object>> usuariosDisponibles = usuariosConductores.stream()
+                .filter(usuarioData -> {
+                    Integer idUsuario = usuarioData.get("idUsuario") != null 
+                        ? ((Number) usuarioData.get("idUsuario")).intValue() 
+                        : null;
+                    return idUsuario != null && !idsConductoresRegistrados.contains(idUsuario);
+                })
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(usuariosDisponibles);
+        } catch (IllegalArgumentException e) {
+            logger.error("Error de autenticación al obtener usuarios disponibles: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Collections.emptyList());
+        } catch (Exception e) {
+            logger.error("Error inesperado al obtener usuarios disponibles: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.emptyList());
         }
     }
 }
