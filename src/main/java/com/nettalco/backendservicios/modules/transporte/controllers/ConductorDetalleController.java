@@ -2,7 +2,12 @@ package com.nettalco.backendservicios.modules.transporte.controllers;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.services.IConductorDetalleService;
+import com.nettalco.backendservicios.modules.transporte.services.impl.ConductorDetalleService;
+import com.nettalco.backendservicios.modules.transporte.entities.ConductorDetalle;
+import com.nettalco.backendservicios.modules.transporte.repositories.ConductorDetalleRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/conductores")
@@ -20,6 +26,23 @@ public class ConductorDetalleController {
     
     @Autowired
     private IConductorDetalleService conductorDetalleService;
+    
+    @Autowired
+    private ConductorDetalleService conductorDetalleServiceImpl;
+    
+    @Autowired
+    private ConductorDetalleRepository conductorDetalleRepository;
+    
+    /**
+     * Extrae el token JWT del header Authorization
+     */
+    private String obtenerToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return "";
+    }
     
     @PostMapping
     public ResponseEntity<?> crearConductorDetalle(@Valid @RequestBody ConductorDetalleRequest request) {
@@ -36,24 +59,40 @@ public class ConductorDetalleController {
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerConductorDetallePorId(@PathVariable Integer id) {
-        Optional<ConductorDetalleResponse> conductor = conductorDetalleService.obtenerConductorDetallePorId(id);
+    public ResponseEntity<?> obtenerConductorDetallePorId(
+            @PathVariable Integer id,
+            HttpServletRequest request) {
+        String token = obtenerToken(request);
+        
+        Optional<ConductorDetalle> conductor = conductorDetalleRepository.findById(id);
         if (conductor.isPresent()) {
-            return ResponseEntity.ok(conductor.get());
+            ConductorCompletoResponse conductorCompleto = 
+                conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductor.get(), token);
+            return ResponseEntity.ok(conductorCompleto);
         }
         return ResponseEntity.notFound().build();
     }
     
     @GetMapping
-    public ResponseEntity<List<ConductorDetalleResponse>> listarConductores(
-            @RequestParam(required = false) String estado) {
-        List<ConductorDetalleResponse> conductores;
+    public ResponseEntity<List<ConductorCompletoResponse>> listarConductores(
+            @RequestParam(required = false) String estado,
+            HttpServletRequest request) {
+        String token = obtenerToken(request);
+        
+        List<ConductorDetalle> conductores;
         if (estado != null && !estado.isEmpty()) {
-            conductores = conductorDetalleService.listarConductoresPorEstado(estado);
+            conductores = conductorDetalleRepository.findAll().stream()
+                .filter(c -> c.getEstado().equals(estado))
+                .collect(Collectors.toList());
         } else {
-            conductores = conductorDetalleService.listarConductores();
+            conductores = conductorDetalleRepository.findAll();
         }
-        return ResponseEntity.ok(conductores);
+        
+        List<ConductorCompletoResponse> conductoresCompletos = conductores.stream()
+            .map(c -> conductorDetalleServiceImpl.convertirAConductorCompletoResponse(c, token))
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(conductoresCompletos);
     }
     
     @PutMapping("/{id}")

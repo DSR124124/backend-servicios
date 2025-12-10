@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.support.TaskExecutorAdapter;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.concurrent.Executors;
 
@@ -29,5 +30,13 @@ public class BackendServiciosApplication {
     @Bean
     public AsyncTaskExecutor applicationTaskExecutor() {
         return new TaskExecutorAdapter(Executors.newVirtualThreadPerTaskExecutor());
+    }
+    
+    /**
+     * Bean de RestTemplate para consumir servicios externos (backend-gestion)
+     */
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }

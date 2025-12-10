@@ -1,7 +1,9 @@
 package com.nettalco.backendservicios.modules.transporte.services.impl;
 
+import com.nettalco.backendservicios.core.clients.GestionClient;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.entities.ConductorDetalle;
 import com.nettalco.backendservicios.modules.transporte.repositories.ConductorDetalleRepository;
 import com.nettalco.backendservicios.modules.transporte.services.IConductorDetalleService;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -19,6 +22,9 @@ public class ConductorDetalleService implements IConductorDetalleService {
     
     @Autowired
     private ConductorDetalleRepository conductorDetalleRepository;
+    
+    @Autowired
+    private GestionClient gestionClient;
     
     @Override
     public ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request) {
@@ -92,6 +98,43 @@ public class ConductorDetalleService implements IConductorDetalleService {
             conductor.getCategoria(),
             conductor.getTelefonoContacto(),
             conductor.getEstado()
+        );
+    }
+    
+    /**
+     * Convierte ConductorDetalle a ConductorCompletoResponse combinando datos del usuario
+     */
+    public ConductorCompletoResponse convertirAConductorCompletoResponse(ConductorDetalle conductor, String token) {
+        Map<String, Object> usuarioData = gestionClient.obtenerUsuario(conductor.getIdUsuarioGestion(), token);
+        
+        String username = null;
+        String email = null;
+        String nombreCompleto = null;
+        Integer idRol = null;
+        String nombreRol = null;
+        Boolean usuarioActivo = null;
+        
+        if (usuarioData != null) {
+            username = (String) usuarioData.get("username");
+            email = (String) usuarioData.get("email");
+            nombreCompleto = (String) usuarioData.get("nombreCompleto");
+            idRol = usuarioData.get("idRol") != null ? ((Number) usuarioData.get("idRol")).intValue() : null;
+            nombreRol = (String) usuarioData.get("nombreRol");
+            usuarioActivo = usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : null;
+        }
+        
+        return new ConductorCompletoResponse(
+            conductor.getIdUsuarioGestion(),
+            conductor.getLicenciaNumero(),
+            conductor.getCategoria(),
+            conductor.getTelefonoContacto(),
+            conductor.getEstado(),
+            username,
+            email,
+            nombreCompleto,
+            idRol,
+            nombreRol,
+            usuarioActivo
         );
     }
 }
