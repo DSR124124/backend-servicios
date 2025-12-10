@@ -44,16 +44,16 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
     /**
      * Obtiene el último registro de un usuario (el más reciente)
      */
-    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC LIMIT 1")
-    java.util.Optional<RegistroUsuarioRuta> findUltimoRegistroByUsuarioId(@Param("idUsuario") Integer idUsuario);
+    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
+    java.util.List<RegistroUsuarioRuta> findUltimosRegistrosByUsuarioId(@Param("idUsuario") Integer idUsuario);
     
     /**
      * Busca un registro existente del usuario (para actualizar en lugar de crear duplicado)
      */
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario " +
            "AND r.ruta.idRuta = :idRuta AND r.paradero.idPunto = :idParadero " +
-           "ORDER BY r.fechaRegistro DESC LIMIT 1")
-    java.util.Optional<RegistroUsuarioRuta> findRegistroExistente(
+           "ORDER BY r.fechaRegistro DESC")
+    java.util.List<RegistroUsuarioRuta> findRegistrosExistentes(
         @Param("idUsuario") Integer idUsuario,
         @Param("idRuta") Integer idRuta,
         @Param("idParadero") Integer idParadero

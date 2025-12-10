@@ -48,11 +48,14 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
         
         // Buscar si ya existe un registro del mismo usuario con la misma ruta y paradero
         // Si existe, lo actualizamos en lugar de crear uno nuevo
-        RegistroUsuarioRuta registro = registroRepository.findRegistroExistente(
+        java.util.List<RegistroUsuarioRuta> registrosExistentes = registroRepository.findRegistrosExistentes(
             idUsuario, 
             request.getIdRuta(), 
             request.getIdParadero()
-        ).orElse(new RegistroUsuarioRuta());
+        );
+        RegistroUsuarioRuta registro = registrosExistentes.isEmpty() 
+            ? new RegistroUsuarioRuta() 
+            : registrosExistentes.get(0);
         
         // Si es un registro nuevo, establecer el usuario
         if (registro.getIdRegistro() == null) {
@@ -87,22 +90,26 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
     @Override
     @Transactional(readOnly = true)
     public java.util.Optional<RegistroUsuarioRutaResponse> obtenerUltimoRegistro(Integer idUsuario) {
-        return registroRepository.findUltimoRegistroByUsuarioId(idUsuario)
-            .map(registro -> {
-                Ruta ruta = registro.getRuta();
-                RutaPunto paradero = registro.getParadero();
-                
-                return new RegistroUsuarioRutaResponse(
-                    registro.getIdRegistro(),
-                    registro.getIdUsuario(),
-                    ruta.getIdRuta(),
-                    ruta.getNombre(),
-                    paradero.getIdPunto(),
-                    paradero.getNombreParadero() != null ? paradero.getNombreParadero() : "Paradero " + paradero.getOrden(),
-                    registro.getFechaRegistro(),
-                    "Último registro encontrado"
-                );
-            });
+        java.util.List<RegistroUsuarioRuta> registros = registroRepository.findUltimosRegistrosByUsuarioId(idUsuario);
+        
+        if (registros.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        
+        RegistroUsuarioRuta registro = registros.get(0); // El primero es el más reciente
+        Ruta ruta = registro.getRuta();
+        RutaPunto paradero = registro.getParadero();
+        
+        return java.util.Optional.of(new RegistroUsuarioRutaResponse(
+            registro.getIdRegistro(),
+            registro.getIdUsuario(),
+            ruta.getIdRuta(),
+            ruta.getNombre(),
+            paradero.getIdPunto(),
+            paradero.getNombreParadero() != null ? paradero.getNombreParadero() : "Paradero " + paradero.getOrden(),
+            registro.getFechaRegistro(),
+            "Último registro encontrado"
+        ));
     }
 }
 
