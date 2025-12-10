@@ -69,16 +69,20 @@ public class GestionClient {
             throw new IllegalArgumentException("Token JWT requerido para obtener usuarios del backend-gestion");
         }
         
+        String tokenTrimmed = token.trim();
+        
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token.trim());
+            headers.set("Authorization", "Bearer " + tokenTrimmed);
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
             String url = UriComponentsBuilder.fromUriString(gestionBaseUrl + "/api/usuarios/por-nombre-rol")
                 .queryParam("nombreRol", nombreRol)
                 .toUriString();
             
-            logger.debug("Consultando backend-gestion: {} con token de longitud: {}", url, token.length());
+            logger.info("Consultando backend-gestion: {} con token de longitud: {} (primeros 20 chars: {}...)", 
+                url, tokenTrimmed.length(), 
+                tokenTrimmed.length() > 20 ? tokenTrimmed.substring(0, 20) : tokenTrimmed);
             
             ParameterizedTypeReference<List<Map<String, Object>>> responseType = 
                 new ParameterizedTypeReference<List<Map<String, Object>>>() {};
@@ -94,12 +98,22 @@ public class GestionClient {
             logger.debug("Obtenidos {} usuarios con rol '{}' del backend-gestion", usuarios.size(), nombreRol);
             return usuarios;
         } catch (RestClientException e) {
-            logger.error("Error al consultar backend-gestion para obtener usuarios con rol '{}': {}", nombreRol, e.getMessage());
-            if (e.getMessage() != null && e.getMessage().contains("403")) {
-                logger.error("Error 403: Token JWT inválido o expirado. Verifique que el token sea válido.");
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Error desconocido";
+            logger.error("Error al consultar backend-gestion para obtener usuarios con rol '{}': {}", nombreRol, errorMsg);
+            
+            // Verificar si es un error 403 (Forbidden) o 401 (Unauthorized)
+            if (errorMsg.contains("403") || errorMsg.contains("Forbidden")) {
+                logger.error("Error 403 Forbidden: El token JWT fue rechazado por el backend-gestion. Posibles causas:");
+                logger.error("  - Token expirado");
+                logger.error("  - Token inválido o corrupto");
+                logger.error("  - Secret key diferente entre backends");
+                logger.error("  - Token no incluye los claims necesarios");
                 throw new IllegalArgumentException("Token JWT inválido o expirado. Por favor, inicie sesión nuevamente.");
+            } else if (errorMsg.contains("401") || errorMsg.contains("Unauthorized")) {
+                logger.error("Error 401 Unauthorized: Token no proporcionado o formato incorrecto");
+                throw new IllegalArgumentException("Token JWT no válido. Por favor, inicie sesión nuevamente.");
             }
-            throw new RuntimeException("Error al comunicarse con el backend-gestion: " + e.getMessage(), e);
+            throw new RuntimeException("Error al comunicarse con el backend-gestion: " + errorMsg, e);
         } catch (Exception e) {
             logger.error("Error inesperado al obtener usuarios por rol '{}': {}", nombreRol, e.getMessage(), e);
             throw new RuntimeException("Error al obtener usuarios del backend-gestion: " + e.getMessage(), e);

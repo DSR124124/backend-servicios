@@ -9,6 +9,8 @@ import com.nettalco.backendservicios.modules.transporte.entities.ConductorDetall
 import com.nettalco.backendservicios.modules.transporte.repositories.ConductorDetalleRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/conductores")
 @CrossOrigin(origins = "*")
 public class ConductorDetalleController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(ConductorDetalleController.class);
     
     @Autowired
     private IConductorDetalleService conductorDetalleService;
@@ -84,18 +88,24 @@ public class ConductorDetalleController {
         String token = obtenerToken(request);
         
         if (token == null || token.trim().isEmpty()) {
+            logger.warn("Petición sin token JWT para listar conductores");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Collections.emptyList());
         }
+        
+        logger.debug("Token recibido para listar conductores. Longitud: {}, primeros 20 chars: {}...", 
+            token.length(), token.length() > 20 ? token.substring(0, 20) : token);
         
         // PASO 1: Obtener usuarios con rol "Conductor" del backend-gestion
         List<Map<String, Object>> usuariosConductores;
         try {
             usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
         } catch (IllegalArgumentException e) {
+            logger.error("Error de autenticación al obtener usuarios: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Collections.emptyList());
         } catch (Exception e) {
+            logger.error("Error inesperado al obtener usuarios del backend-gestion: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Collections.emptyList());
         }
