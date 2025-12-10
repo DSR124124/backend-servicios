@@ -40,9 +40,12 @@ public class ConductorDetalleController {
     private String obtenerToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
+            String token = authHeader.substring(7).trim();
+            if (!token.isEmpty()) {
+                return token;
+            }
         }
-        return "";
+        return null; // Retornar null si no hay token válido
     }
     
     @PostMapping
@@ -80,8 +83,22 @@ public class ConductorDetalleController {
             HttpServletRequest request) {
         String token = obtenerToken(request);
         
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Collections.emptyList());
+        }
+        
         // PASO 1: Obtener usuarios con rol "Conductor" del backend-gestion
-        List<Map<String, Object>> usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
+        List<Map<String, Object>> usuariosConductores;
+        try {
+            usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Collections.emptyList());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Collections.emptyList());
+        }
         
         if (usuariosConductores == null || usuariosConductores.isEmpty()) {
             return ResponseEntity.ok(Collections.emptyList());

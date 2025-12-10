@@ -1,12 +1,15 @@
 package com.nettalco.backendservicios.core.clients;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -18,6 +21,8 @@ import java.util.Map;
  */
 @Component
 public class GestionClient {
+    
+    private static final Logger logger = LoggerFactory.getLogger(GestionClient.class);
     
     private final RestTemplate restTemplate;
     private final String gestionBaseUrl;
@@ -59,14 +64,21 @@ public class GestionClient {
      * @return Lista de usuarios con ese rol
      */
     public List<Map<String, Object>> obtenerUsuariosPorNombreRol(String nombreRol, String token) {
+        if (token == null || token.trim().isEmpty()) {
+            logger.error("Token JWT vacío o nulo al intentar obtener usuarios por rol: {}", nombreRol);
+            throw new IllegalArgumentException("Token JWT requerido para obtener usuarios del backend-gestion");
+        }
+        
         try {
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token);
+            headers.set("Authorization", "Bearer " + token.trim());
             HttpEntity<String> entity = new HttpEntity<>(headers);
             
             String url = UriComponentsBuilder.fromUriString(gestionBaseUrl + "/api/usuarios/por-nombre-rol")
                 .queryParam("nombreRol", nombreRol)
                 .toUriString();
+            
+            logger.debug("Consultando backend-gestion: {} con token de longitud: {}", url, token.length());
             
             ParameterizedTypeReference<List<Map<String, Object>>> responseType = 
                 new ParameterizedTypeReference<List<Map<String, Object>>>() {};
@@ -78,9 +90,19 @@ public class GestionClient {
                 responseType
             );
             
-            return response.getBody() != null ? response.getBody() : List.of();
+            List<Map<String, Object>> usuarios = response.getBody() != null ? response.getBody() : List.of();
+            logger.debug("Obtenidos {} usuarios con rol '{}' del backend-gestion", usuarios.size(), nombreRol);
+            return usuarios;
+        } catch (RestClientException e) {
+            logger.error("Error al consultar backend-gestion para obtener usuarios con rol '{}': {}", nombreRol, e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("403")) {
+                logger.error("Error 403: Token JWT inválido o expirado. Verifique que el token sea válido.");
+                throw new IllegalArgumentException("Token JWT inválido o expirado. Por favor, inicie sesión nuevamente.");
+            }
+            throw new RuntimeException("Error al comunicarse con el backend-gestion: " + e.getMessage(), e);
         } catch (Exception e) {
-            return List.of();
+            logger.error("Error inesperado al obtener usuarios por rol '{}': {}", nombreRol, e.getMessage(), e);
+            throw new RuntimeException("Error al obtener usuarios del backend-gestion: " + e.getMessage(), e);
         }
     }
 }
