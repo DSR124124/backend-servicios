@@ -93,66 +93,31 @@ public class ConductorDetalleController {
                 .body(Collections.emptyList());
         }
         
-        logger.debug("Token recibido para listar conductores. Longitud: {}, primeros 20 chars: {}...", 
-            token.length(), token.length() > 20 ? token.substring(0, 20) : token);
+        // PASO 1: Obtener SOLO los conductores registrados en backend-servicios
+        List<ConductorDetalle> conductoresDetalle = conductorDetalleRepository.findAll();
         
-        // PASO 1: Obtener usuarios con rol "Conductor" del backend-gestion
-        List<Map<String, Object>> usuariosConductores;
-        try {
-            usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
-        } catch (IllegalArgumentException e) {
-            logger.error("Error de autenticación al obtener usuarios: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Collections.emptyList());
-        } catch (Exception e) {
-            logger.error("Error inesperado al obtener usuarios del backend-gestion: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Collections.emptyList());
-        }
-        
-        if (usuariosConductores == null || usuariosConductores.isEmpty()) {
+        if (conductoresDetalle == null || conductoresDetalle.isEmpty()) {
             return ResponseEntity.ok(Collections.emptyList());
         }
         
-        // PASO 2: Obtener todos los conductores_detalle del backend-servicios
-        List<ConductorDetalle> conductoresDetalle = conductorDetalleRepository.findAll();
+        // PASO 2: Aplicar filtro por estado si se proporciona
+        if (estado != null && !estado.isEmpty()) {
+            conductoresDetalle = conductoresDetalle.stream()
+                .filter(c -> estado.equals(c.getEstado()))
+                .collect(Collectors.toList());
+        }
         
-        // Crear un mapa para acceso rápido por idUsuarioGestion
-        Map<Integer, ConductorDetalle> conductoresMap = conductoresDetalle.stream()
-            .collect(Collectors.toMap(
-                ConductorDetalle::getIdUsuarioGestion,
-                c -> c
-            ));
-        
-        // PASO 3: SOLO retornar conductores que YA están registrados en backend-servicios
-        // Filtrar solo los que tienen un registro en conductor_detalle
-        List<ConductorCompletoResponse> conductoresCompletos = usuariosConductores.stream()
-            .map(usuarioData -> {
-                Integer idUsuario = usuarioData.get("idUsuario") != null 
-                    ? ((Number) usuarioData.get("idUsuario")).intValue() 
-                    : null;
-                
-                if (idUsuario == null) {
-                    return null;
+        // PASO 3: Convertir cada conductor_detalle a ConductorCompletoResponse
+        // obteniendo los datos del usuario del backend-gestion
+        List<ConductorCompletoResponse> conductoresCompletos = conductoresDetalle.stream()
+            .map(conductorDetalle -> {
+                try {
+                    return conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductorDetalle, token);
+                } catch (Exception e) {
+                    logger.error("Error al obtener datos del usuario {} del backend-gestion: {}", 
+                        conductorDetalle.getIdUsuarioGestion(), e.getMessage());
+                    return null; // Excluir si hay error al obtener datos del usuario
                 }
-                
-                // Obtener datos del conductor desde backend-servicios (si existe)
-                ConductorDetalle conductorDetalle = conductoresMap.get(idUsuario);
-                
-                // SOLO incluir si tiene registro en conductor_detalle
-                if (conductorDetalle == null) {
-                    return null; // Excluir conductores no registrados
-                }
-                
-                // Si hay filtro por estado, verificar
-                if (estado != null && !estado.isEmpty()) {
-                    if (!estado.equals(conductorDetalle.getEstado())) {
-                        return null; // Filtrar este conductor por estado
-                    }
-                }
-                
-                // Retornar respuesta completa con datos del conductor registrado
-                return conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductorDetalle, token);
             })
             .filter(Objects::nonNull) // Filtrar nulls
             .collect(Collectors.toList());
