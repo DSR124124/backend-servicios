@@ -27,9 +27,22 @@ public class ConductorDetalleService implements IConductorDetalleService {
     private GestionClient gestionClient;
     
     @Override
-    public ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request) {
+    public ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request, String token) {
+        // Validar que no exista ya un conductor con este ID de usuario
         if (conductorDetalleRepository.existsById(request.getIdUsuarioGestion())) {
-            throw new IllegalArgumentException("Ya existe un conductor con el ID de usuario: " + request.getIdUsuarioGestion());
+            throw new IllegalArgumentException("Ya existe un conductor registrado con el ID de usuario: " + request.getIdUsuarioGestion());
+        }
+        
+        // Validar que el usuario exista en el backend-gestion
+        Map<String, Object> usuarioData = gestionClient.obtenerUsuario(request.getIdUsuarioGestion(), token);
+        if (usuarioData == null) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no existe en el sistema de gestión");
+        }
+        
+        // Validar que el usuario esté activo
+        Boolean activo = usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : false;
+        if (!activo) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no está activo en el sistema de gestión");
         }
         
         ConductorDetalle conductor = new ConductorDetalle();

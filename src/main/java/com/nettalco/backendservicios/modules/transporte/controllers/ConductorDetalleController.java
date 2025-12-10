@@ -45,9 +45,12 @@ public class ConductorDetalleController {
     }
     
     @PostMapping
-    public ResponseEntity<?> crearConductorDetalle(@Valid @RequestBody ConductorDetalleRequest request) {
+    public ResponseEntity<?> crearConductorDetalle(
+            @Valid @RequestBody ConductorDetalleRequest request,
+            HttpServletRequest httpRequest) {
         try {
-            ConductorDetalleResponse response = conductorDetalleService.crearConductorDetalle(request);
+            String token = obtenerToken(httpRequest);
+            ConductorDetalleResponse response = conductorDetalleService.crearConductorDetalle(request, token);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()

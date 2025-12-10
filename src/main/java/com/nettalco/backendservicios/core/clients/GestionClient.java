@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -46,33 +45,7 @@ public class GestionClient {
             
             return response.getBody();
         } catch (Exception e) {
-            // Si no se puede obtener el usuario, retornar null
             return null;
-        }
-    }
-    
-    /**
-     * Obtiene todos los usuarios desde el backend de gestión
-     */
-    public List<Map<String, Object>> obtenerTodosUsuarios(String token) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token);
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            String url = gestionBaseUrl + "/api/usuarios";
-            @SuppressWarnings("unchecked")
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                url, 
-                HttpMethod.GET, 
-                entity, 
-                (Class<List<Map<String, Object>>>) (Class<?>) List.class
-            );
-            
-            return response.getBody();
-        } catch (Exception e) {
-            // Si no se puede obtener los usuarios, retornar lista vacía
-            return List.of();
         }
     }
 }

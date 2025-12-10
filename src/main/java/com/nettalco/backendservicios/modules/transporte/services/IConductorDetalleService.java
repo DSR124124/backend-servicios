@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface IConductorDetalleService {
-    ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request);
+    ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request, String token);
     Optional<ConductorDetalleResponse> obtenerConductorDetallePorId(Integer id);
     List<ConductorDetalleResponse> listarConductores();
     List<ConductorDetalleResponse> listarConductoresPorEstado(String estado);
