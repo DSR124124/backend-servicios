@@ -34,9 +34,16 @@ public class BackendServiciosApplication {
     
     /**
      * Bean de RestTemplate para consumir servicios externos (backend-gestion)
+     * Configurado para manejar HTTPS y timeouts
      */
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory = 
+            new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10000); // 10 segundos
+        factory.setReadTimeout(30000); // 30 segundos
+        
+        RestTemplate restTemplate = new RestTemplate(factory);
+        return restTemplate;
     }
 }
