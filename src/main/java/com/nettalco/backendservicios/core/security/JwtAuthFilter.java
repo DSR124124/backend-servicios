@@ -76,15 +76,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new UserDetails(idUsuario, username, idRol, nombreRol));
                     
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                } else {
-                    logger.warn("Token JWT inválido para la petición: " + request.getRequestURI());
                 }
             } catch (Exception e) {
-                logger.error("Error validando token JWT: " + e.getMessage(), e);
-                // Continuar sin autenticación, Spring Security manejará el 403
+                // Error al validar token - Spring Security manejará el 403
             }
-        } else {
-            logger.debug("No se encontró header Authorization en la petición: " + request.getRequestURI());
         }
         
         chain.doFilter(request, response);
