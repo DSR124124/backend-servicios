@@ -1,5 +1,6 @@
 package com.nettalco.backendservicios.modules.transporte.controllers;
 
+import com.nettalco.backendservicios.core.clients.GestionClient;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.services.IConductorDetalleService;
@@ -13,8 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -30,6 +30,9 @@ public class ConductorDetalleController {
     
     @Autowired
     private ConductorDetalleRepository conductorDetalleRepository;
+    
+    @Autowired
+    private GestionClient gestionClient;
     
     /**
      * Extrae el token JWT del header Authorization
@@ -77,17 +80,66 @@ public class ConductorDetalleController {
             HttpServletRequest request) {
         String token = obtenerToken(request);
         
-        List<ConductorDetalle> conductores;
-        if (estado != null && !estado.isEmpty()) {
-            conductores = conductorDetalleRepository.findAll().stream()
-                .filter(c -> c.getEstado().equals(estado))
-                .collect(Collectors.toList());
-        } else {
-            conductores = conductorDetalleRepository.findAll();
+        // PASO 1: Obtener usuarios con rol "Conductor" del backend-gestion
+        List<Map<String, Object>> usuariosConductores = gestionClient.obtenerUsuariosPorNombreRol("Conductor", token);
+        
+        if (usuariosConductores == null || usuariosConductores.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
         }
         
-        List<ConductorCompletoResponse> conductoresCompletos = conductores.stream()
-            .map(c -> conductorDetalleServiceImpl.convertirAConductorCompletoResponse(c, token))
+        // PASO 2: Obtener todos los conductores_detalle del backend-servicios
+        List<ConductorDetalle> conductoresDetalle = conductorDetalleRepository.findAll();
+        
+        // Crear un mapa para acceso rápido por idUsuarioGestion
+        Map<Integer, ConductorDetalle> conductoresMap = conductoresDetalle.stream()
+            .collect(Collectors.toMap(
+                ConductorDetalle::getIdUsuarioGestion,
+                c -> c
+            ));
+        
+        // PASO 3: Combinar datos del backend-gestion con datos locales
+        List<ConductorCompletoResponse> conductoresCompletos = usuariosConductores.stream()
+            .map(usuarioData -> {
+                Integer idUsuario = usuarioData.get("idUsuario") != null 
+                    ? ((Number) usuarioData.get("idUsuario")).intValue() 
+                    : null;
+                
+                if (idUsuario == null) {
+                    return null;
+                }
+                
+                // Obtener datos del conductor desde backend-servicios (si existe)
+                ConductorDetalle conductorDetalle = conductoresMap.get(idUsuario);
+                
+                // Si hay filtro por estado, verificar
+                if (estado != null && !estado.isEmpty()) {
+                    if (conductorDetalle == null || !estado.equals(conductorDetalle.getEstado())) {
+                        return null; // Filtrar este conductor
+                    }
+                }
+                
+                // Si existe conductor_detalle, usar esos datos, sino crear respuesta solo con datos de gestión
+                if (conductorDetalle != null) {
+                    return conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductorDetalle, token);
+                } else {
+                    // Conductor existe en gestión pero no tiene detalles en servicios
+                    // Crear respuesta solo con datos del backend-gestion
+                    return new ConductorCompletoResponse(
+                        idUsuario,
+                        null, // licenciaNumero
+                        null, // categoria
+                        null, // telefonoContacto
+                        null, // estado
+                        (String) usuarioData.get("username"),
+                        (String) usuarioData.get("email"),
+                        (String) usuarioData.get("nombreCompleto"),
+                        usuarioData.get("idRol") != null ? ((Number) usuarioData.get("idRol")).intValue() : null,
+                        (String) usuarioData.get("nombreRol"),
+                        usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : null
+                    );
+                }
+            })
+            .filter(Objects::nonNull) // Filtrar nulls
             .collect(Collectors.toList());
         
         return ResponseEntity.ok(conductoresCompletos);
