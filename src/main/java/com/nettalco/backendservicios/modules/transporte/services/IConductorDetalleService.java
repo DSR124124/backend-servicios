@@ -1,17 +1,11 @@
 package com.nettalco.backendservicios.modules.transporte.services;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
-import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleResponse;
-
-import java.util.List;
-import java.util.Optional;
+import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 
 public interface IConductorDetalleService {
-    ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request, String token);
-    Optional<ConductorDetalleResponse> obtenerConductorDetallePorId(Integer id);
-    List<ConductorDetalleResponse> listarConductores();
-    List<ConductorDetalleResponse> listarConductoresPorEstado(String estado);
-    ConductorDetalleResponse actualizarConductorDetalle(Integer id, ConductorDetalleRequest request);
+    ConductorCompletoResponse crearConductorDetalle(ConductorDetalleRequest request, String token);
+    ConductorCompletoResponse actualizarConductorDetalle(Integer id, ConductorDetalleRequest request, String token);
     void eliminarConductorDetalle(Integer id);
 }
 

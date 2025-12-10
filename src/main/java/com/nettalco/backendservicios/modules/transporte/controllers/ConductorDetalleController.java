@@ -1,7 +1,6 @@
 package com.nettalco.backendservicios.modules.transporte.controllers;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
-import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.services.IConductorDetalleService;
 import com.nettalco.backendservicios.modules.transporte.services.impl.ConductorDetalleService;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -50,7 +48,7 @@ public class ConductorDetalleController {
             HttpServletRequest httpRequest) {
         try {
             String token = obtenerToken(httpRequest);
-            ConductorDetalleResponse response = conductorDetalleService.crearConductorDetalle(request, token);
+            ConductorCompletoResponse response = conductorDetalleService.crearConductorDetalle(request, token);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -67,13 +65,10 @@ public class ConductorDetalleController {
             HttpServletRequest request) {
         String token = obtenerToken(request);
         
-        Optional<ConductorDetalle> conductor = conductorDetalleRepository.findById(id);
-        if (conductor.isPresent()) {
-            ConductorCompletoResponse conductorCompleto = 
-                conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductor.get(), token);
-            return ResponseEntity.ok(conductorCompleto);
-        }
-        return ResponseEntity.notFound().build();
+        return conductorDetalleRepository.findById(id)
+            .map(conductor -> ResponseEntity.ok(
+                conductorDetalleServiceImpl.convertirAConductorCompletoResponse(conductor, token)))
+            .orElse(ResponseEntity.notFound().build());
     }
     
     @GetMapping
@@ -101,9 +96,11 @@ public class ConductorDetalleController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarConductorDetalle(
             @PathVariable Integer id,
-            @Valid @RequestBody ConductorDetalleRequest request) {
+            @Valid @RequestBody ConductorDetalleRequest request,
+            HttpServletRequest httpRequest) {
         try {
-            ConductorDetalleResponse response = conductorDetalleService.actualizarConductorDetalle(id, request);
+            String token = obtenerToken(httpRequest);
+            ConductorCompletoResponse response = conductorDetalleService.actualizarConductorDetalle(id, request, token);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()

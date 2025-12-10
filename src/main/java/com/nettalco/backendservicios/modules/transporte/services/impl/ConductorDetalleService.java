@@ -2,7 +2,6 @@ package com.nettalco.backendservicios.modules.transporte.services.impl;
 
 import com.nettalco.backendservicios.core.clients.GestionClient;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleRequest;
-import com.nettalco.backendservicios.modules.transporte.dtos.ConductorDetalleResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ConductorCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.entities.ConductorDetalle;
 import com.nettalco.backendservicios.modules.transporte.repositories.ConductorDetalleRepository;
@@ -11,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -26,9 +22,18 @@ public class ConductorDetalleService implements IConductorDetalleService {
     @Autowired
     private GestionClient gestionClient;
     
+    /**
+     * Registra un conductor en la tabla conductores_detalle del backend-servicios.
+     * El idUsuarioGestion debe corresponder a un usuario existente en el backend-gestion
+     * con rol de Conductor y estado activo.
+     * 
+     * @param request Datos del conductor incluyendo el idUsuarioGestion del backend-gestion
+     * @param token Token JWT para validar con el backend-gestion
+     * @return ConductorCompletoResponse con datos del conductor y del usuario de gestión
+     */
     @Override
-    public ConductorDetalleResponse crearConductorDetalle(ConductorDetalleRequest request, String token) {
-        // Validar que no exista ya un conductor con este ID de usuario
+    public ConductorCompletoResponse crearConductorDetalle(ConductorDetalleRequest request, String token) {
+        // Validar que no exista ya un conductor con este ID de usuario en backend-servicios
         if (conductorDetalleRepository.existsById(request.getIdUsuarioGestion())) {
             throw new IllegalArgumentException("Ya existe un conductor registrado con el ID de usuario: " + request.getIdUsuarioGestion());
         }
@@ -39,51 +44,59 @@ public class ConductorDetalleService implements IConductorDetalleService {
             throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no existe en el sistema de gestión");
         }
         
-        // Validar que el usuario esté activo
+        // Validar que el usuario esté activo en el backend-gestion
         Boolean activo = usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : false;
         if (!activo) {
             throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no está activo en el sistema de gestión");
         }
         
+        // Validar que el usuario tenga rol de Conductor en el backend-gestion
+        String nombreRol = (String) usuarioData.get("nombreRol");
+        if (nombreRol == null || !nombreRol.toLowerCase().contains("conductor")) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no tiene el rol de Conductor. Su rol actual es: " + (nombreRol != null ? nombreRol : "sin rol"));
+        }
+        
+        // Crear y guardar el conductor en la tabla conductores_detalle del backend-servicios
+        // El idUsuarioGestion es la clave primaria y referencia al usuario en backend-gestion
         ConductorDetalle conductor = new ConductorDetalle();
-        conductor.setIdUsuarioGestion(request.getIdUsuarioGestion());
+        conductor.setIdUsuarioGestion(request.getIdUsuarioGestion()); // ID del usuario del backend-gestion
         conductor.setLicenciaNumero(request.getLicenciaNumero());
         conductor.setCategoria(request.getCategoria());
         conductor.setTelefonoContacto(request.getTelefonoContacto());
         conductor.setEstado(request.getEstado() != null ? request.getEstado() : "activo");
         
+        // Guardar en la base de datos del backend-servicios
         ConductorDetalle conductorGuardado = conductorDetalleRepository.save(conductor);
-        return convertirAConductorDetalleResponse(conductorGuardado);
+        
+        // Retornar respuesta completa con datos del usuario de gestión
+        return convertirAConductorCompletoResponse(conductorGuardado, token);
     }
     
     @Override
-    @Transactional(readOnly = true)
-    public Optional<ConductorDetalleResponse> obtenerConductorDetallePorId(Integer id) {
-        return conductorDetalleRepository.findById(id)
-            .map(this::convertirAConductorDetalleResponse);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ConductorDetalleResponse> listarConductores() {
-        return conductorDetalleRepository.findAll().stream()
-            .map(this::convertirAConductorDetalleResponse)
-            .collect(Collectors.toList());
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public List<ConductorDetalleResponse> listarConductoresPorEstado(String estado) {
-        return conductorDetalleRepository.findAll().stream()
-            .filter(conductor -> conductor.getEstado().equals(estado))
-            .map(this::convertirAConductorDetalleResponse)
-            .collect(Collectors.toList());
-    }
-    
-    @Override
-    public ConductorDetalleResponse actualizarConductorDetalle(Integer id, ConductorDetalleRequest request) {
+    public ConductorCompletoResponse actualizarConductorDetalle(Integer id, ConductorDetalleRequest request, String token) {
         ConductorDetalle conductor = conductorDetalleRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Conductor no encontrado con ID: " + id));
+        
+        // No permitir cambiar el idUsuarioGestion
+        if (!conductor.getIdUsuarioGestion().equals(request.getIdUsuarioGestion())) {
+            throw new IllegalArgumentException("No se permite cambiar el ID de usuario de gestión de un conductor existente");
+        }
+        
+        // Validar que el usuario siga existiendo y tenga rol de Conductor
+        Map<String, Object> usuarioData = gestionClient.obtenerUsuario(request.getIdUsuarioGestion(), token);
+        if (usuarioData == null) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no existe en el sistema de gestión");
+        }
+        
+        Boolean activo = usuarioData.get("activo") != null ? (Boolean) usuarioData.get("activo") : false;
+        if (!activo) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no está activo en el sistema de gestión");
+        }
+        
+        String nombreRol = (String) usuarioData.get("nombreRol");
+        if (nombreRol == null || !nombreRol.toLowerCase().contains("conductor")) {
+            throw new IllegalArgumentException("El usuario con ID " + request.getIdUsuarioGestion() + " no tiene el rol de Conductor. Su rol actual es: " + (nombreRol != null ? nombreRol : "sin rol"));
+        }
         
         conductor.setLicenciaNumero(request.getLicenciaNumero());
         conductor.setCategoria(request.getCategoria());
@@ -93,7 +106,7 @@ public class ConductorDetalleService implements IConductorDetalleService {
         }
         
         ConductorDetalle conductorActualizado = conductorDetalleRepository.save(conductor);
-        return convertirAConductorDetalleResponse(conductorActualizado);
+        return convertirAConductorCompletoResponse(conductorActualizado, token);
     }
     
     @Override
@@ -102,16 +115,6 @@ public class ConductorDetalleService implements IConductorDetalleService {
             throw new IllegalArgumentException("Conductor no encontrado con ID: " + id);
         }
         conductorDetalleRepository.deleteById(id);
-    }
-    
-    private ConductorDetalleResponse convertirAConductorDetalleResponse(ConductorDetalle conductor) {
-        return new ConductorDetalleResponse(
-            conductor.getIdUsuarioGestion(),
-            conductor.getLicenciaNumero(),
-            conductor.getCategoria(),
-            conductor.getTelefonoContacto(),
-            conductor.getEstado()
-        );
     }
     
     /**
