@@ -4,6 +4,7 @@ import com.nettalco.backendservicios.core.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -41,6 +42,9 @@ public class SecurityConfig {
             
             // Configurar autorizacion de requests
             .authorizeHttpRequests(auth -> auth
+                // Permitir peticiones OPTIONS (preflight CORS) sin autenticacion
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
                 // Endpoints publicos (sin autenticacion)
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/health").permitAll()
@@ -73,10 +77,13 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
+        // Permitir todos los orígenes usando patterns (compatible con allowCredentials false)
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
+        // Métodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         
+        // Headers permitidos
         configuration.setAllowedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
@@ -84,9 +91,11 @@ public class SecurityConfig {
             "Accept",
             "Origin",
             "Access-Control-Request-Method",
-            "Access-Control-Request-Headers"
+            "Access-Control-Request-Headers",
+            "Cache-Control"
         ));
         
+        // Headers expuestos al cliente
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization",
             "Content-Type",
@@ -94,8 +103,10 @@ public class SecurityConfig {
             "Access-Control-Allow-Credentials"
         ));
         
+        // No permitir credenciales cuando usas * en origins (pero el token se envía en header)
         configuration.setAllowCredentials(false);
         
+        // Cache de preflight requests
         configuration.setMaxAge(3600L);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

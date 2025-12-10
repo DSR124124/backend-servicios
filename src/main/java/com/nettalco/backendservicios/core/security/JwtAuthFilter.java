@@ -46,6 +46,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                   FilterChain chain)
             throws ServletException, IOException {
         
+        // Permitir peticiones OPTIONS (preflight) sin autenticación
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+        
         String authHeader = request.getHeader("Authorization");
         
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -70,10 +76,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new UserDetails(idUsuario, username, idRol, nombreRol));
                     
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    logger.warn("Token JWT inválido para la petición: " + request.getRequestURI());
                 }
             } catch (Exception e) {
-                logger.error("Error validando token JWT: " + e.getMessage());
+                logger.error("Error validando token JWT: " + e.getMessage(), e);
+                // Continuar sin autenticación, Spring Security manejará el 403
             }
+        } else {
+            logger.debug("No se encontró header Authorization en la petición: " + request.getRequestURI());
         }
         
         chain.doFilter(request, response);

@@ -103,5 +103,44 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             "Último registro encontrado"
         ));
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<RegistroUsuarioRutaResponse> listarTodosLosRegistros() {
+        return registroRepository.findAll().stream()
+            .map(this::convertirARegistroResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<RegistroUsuarioRutaResponse> listarRegistrosPorUsuario(Integer idUsuario) {
+        return registroRepository.findByUsuarioIdOrderByFechaDesc(idUsuario).stream()
+            .map(this::convertirARegistroResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<RegistroUsuarioRutaResponse> listarRegistrosPorRuta(Integer idRuta) {
+        return registroRepository.findByRutaIdOrderByFechaDesc(idRuta).stream()
+            .map(this::convertirARegistroResponse)
+            .collect(java.util.stream.Collectors.toList());
+    }
+    
+    private RegistroUsuarioRutaResponse convertirARegistroResponse(RegistroUsuarioRuta registro) {
+        Ruta ruta = registro.getRuta();
+        RutaPunto paradero = registro.getParadero();
+        return new RegistroUsuarioRutaResponse(
+            registro.getIdRegistro(),
+            registro.getIdUsuario(),
+            ruta.getIdRuta(),
+            ruta.getNombre(),
+            paradero.getIdPunto(),
+            paradero.getNombreParadero() != null ? paradero.getNombreParadero() : "Paradero " + paradero.getOrden(),
+            registro.getFechaRegistro(),
+            "Registro encontrado"
+        );
+    }
 }
 

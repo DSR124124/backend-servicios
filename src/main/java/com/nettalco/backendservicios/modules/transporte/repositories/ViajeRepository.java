@@ -109,4 +109,9 @@ public interface ViajeRepository extends JpaRepository<Viaje, Integer> {
         @Param("desde") java.time.OffsetDateTime desde,
         @Param("hasta") java.time.OffsetDateTime hasta
     );
+    
+    List<Viaje> findByEstado(String estado);
+    
+    @Query("SELECT v FROM Viaje v WHERE v.ruta.idRuta = :idRuta")
+    List<Viaje> findByRutaIdRuta(@Param("idRuta") Integer idRuta);
 }
