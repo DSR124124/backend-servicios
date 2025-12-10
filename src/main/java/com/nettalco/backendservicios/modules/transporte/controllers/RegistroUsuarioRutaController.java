@@ -1,0 +1,64 @@
+package com.nettalco.backendservicios.modules.transporte.controllers;
+
+import com.nettalco.backendservicios.core.security.UserDetails;
+import com.nettalco.backendservicios.modules.transporte.dtos.RegistroUsuarioRutaRequest;
+import com.nettalco.backendservicios.modules.transporte.dtos.RegistroUsuarioRutaResponse;
+import com.nettalco.backendservicios.modules.transporte.services.IRegistroUsuarioRutaService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+/**
+ * Controller para registrar la selección de ruta y paradero por usuarios.
+ * Requiere autenticación JWT.
+ */
+@RestController
+@RequestMapping("/api/registro-ruta")
+@CrossOrigin(origins = "*")
+public class RegistroUsuarioRutaController {
+    
+    @Autowired
+    private IRegistroUsuarioRutaService registroService;
+    
+    /**
+     * Obtiene el ID del usuario autenticado desde el JWT
+     */
+    private Integer obtenerIdUsuario() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getDetails() instanceof UserDetails) {
+            UserDetails userDetails = (UserDetails) auth.getDetails();
+            return userDetails.getIdUsuario();
+        }
+        throw new SecurityException("Usuario no autenticado");
+    }
+    
+    /**
+     * Registra la selección de ruta y paradero por un usuario
+     * Endpoint: POST /api/registro-ruta
+     * Requiere autenticación JWT
+     */
+    @PostMapping
+    public ResponseEntity<?> registrarRutaParadero(@Valid @RequestBody RegistroUsuarioRutaRequest request) {
+        try {
+            Integer idUsuario = obtenerIdUsuario();
+            RegistroUsuarioRutaResponse response = registroService.registrarRutaParadero(idUsuario, request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al registrar ruta y paradero: " + e.getMessage()));
+        }
+    }
+}
+

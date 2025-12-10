@@ -284,9 +284,9 @@ public class ViajeService implements IViajeService {
                     
                     return new ViajeActivoConductorResponse.ParaderoInfo(
                         punto.getIdPunto(),
-                        punto.getOrden(),
-                        punto.getNombreParadero(),
-                        punto.getLatitud() != null ? punto.getLatitud().doubleValue() : null,
+                    punto.getOrden(),
+                    punto.getNombreParadero(),
+                    punto.getLatitud() != null ? punto.getLatitud().doubleValue() : null,
                         punto.getLongitud() != null ? punto.getLongitud().doubleValue() : null,
                         estadoParadero
                     );
