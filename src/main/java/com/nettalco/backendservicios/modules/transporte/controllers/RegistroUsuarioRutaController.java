@@ -49,6 +49,27 @@ public class RegistroUsuarioRutaController {
         }
     }
     
+    @GetMapping("/ultimo")
+    public ResponseEntity<?> obtenerUltimoRegistro() {
+        try {
+            Integer idUsuario = obtenerIdUsuario();
+            java.util.Optional<RegistroUsuarioRutaResponse> registro = registroService.obtenerUltimoRegistro(idUsuario);
+            
+            if (registro.isPresent()) {
+                return ResponseEntity.ok(registro.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("mensaje", "No se encontró ningún registro para este usuario"));
+            }
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener el último registro: " + e.getMessage()));
+        }
+    }
+    
     @GetMapping("/admin/estadisticas")
     public ResponseEntity<?> obtenerEstadisticas() {
         try {

@@ -6,6 +6,7 @@ import com.nettalco.backendservicios.modules.transporte.dtos.RegistroUsuarioRuta
 
 public interface IRegistroUsuarioRutaService {
     RegistroUsuarioRutaResponse registrarRutaParadero(Integer idUsuario, RegistroUsuarioRutaRequest request);
+    java.util.Optional<RegistroUsuarioRutaResponse> obtenerUltimoRegistro(Integer idUsuario);
     EstadisticasRegistrosResponse obtenerEstadisticas();
 }
 

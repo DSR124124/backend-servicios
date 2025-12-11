@@ -94,6 +94,31 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
     
     @Override
     @Transactional(readOnly = true)
+    public java.util.Optional<RegistroUsuarioRutaResponse> obtenerUltimoRegistro(Integer idUsuario) {
+        java.util.List<RegistroUsuarioRuta> registros = registroRepository.findAllByUsuarioId(idUsuario);
+        
+        if (registros.isEmpty()) {
+            return java.util.Optional.empty();
+        }
+        
+        RegistroUsuarioRuta registro = registros.get(0);
+        Ruta ruta = registro.getRuta();
+        RutaPunto paradero = registro.getParadero();
+        
+        return java.util.Optional.of(new RegistroUsuarioRutaResponse(
+            registro.getIdRegistro(),
+            registro.getIdUsuario(),
+            ruta.getIdRuta(),
+            ruta.getNombre(),
+            paradero.getIdPunto(),
+            paradero.getNombreParadero() != null ? paradero.getNombreParadero() : "Paradero " + paradero.getOrden(),
+            registro.getFechaRegistro(),
+            "Último registro encontrado"
+        ));
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
     public EstadisticasRegistrosResponse obtenerEstadisticas() {
         // KPIs principales
         Long totalPersonasRegistradas = registroRepository.count();
