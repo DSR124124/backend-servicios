@@ -186,7 +186,17 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
         List<EstadisticasRegistrosResponse.RegistroPorFecha> registrosPorDia = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         for (Object[] data : registrosPorDiaData) {
-            LocalDate fecha = ((java.sql.Date) data[0]).toLocalDate();
+            LocalDate fecha;
+            if (data[0] instanceof java.sql.Date) {
+                fecha = ((java.sql.Date) data[0]).toLocalDate();
+            } else if (data[0] instanceof java.sql.Timestamp) {
+                fecha = ((java.sql.Timestamp) data[0]).toLocalDateTime().toLocalDate();
+            } else if (data[0] instanceof java.time.LocalDate) {
+                fecha = (LocalDate) data[0];
+            } else {
+                // Intentar parsear como string
+                fecha = LocalDate.parse(data[0].toString());
+            }
             Long cantidad = ((Number) data[1]).longValue();
             registrosPorDia.add(new EstadisticasRegistrosResponse.RegistroPorFecha(
                 fecha.format(formatter), "dia", cantidad
@@ -226,7 +236,16 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
         List<Object[]> registrosPorSemanaData = registroRepository.countRegistrosPorDia(fechaInicio4Semanas);
         java.util.Map<String, Long> semanaMap = new java.util.HashMap<>();
         for (Object[] data : registrosPorSemanaData) {
-            LocalDate fecha = ((java.sql.Date) data[0]).toLocalDate();
+            LocalDate fecha;
+            if (data[0] instanceof java.sql.Date) {
+                fecha = ((java.sql.Date) data[0]).toLocalDate();
+            } else if (data[0] instanceof java.sql.Timestamp) {
+                fecha = ((java.sql.Timestamp) data[0]).toLocalDateTime().toLocalDate();
+            } else if (data[0] instanceof java.time.LocalDate) {
+                fecha = (LocalDate) data[0];
+            } else {
+                fecha = LocalDate.parse(data[0].toString());
+            }
             Long cantidad = ((Number) data[1]).longValue();
             String semana = fecha.format(DateTimeFormatter.ofPattern("yyyy-'W'ww"));
             semanaMap.put(semana, semanaMap.getOrDefault(semana, 0L) + cantidad);
@@ -241,7 +260,16 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
         List<Object[]> registrosPorMesData = registroRepository.countRegistrosPorDia(fechaInicio12Meses);
         java.util.Map<String, Long> mesMap = new java.util.HashMap<>();
         for (Object[] data : registrosPorMesData) {
-            LocalDate fecha = ((java.sql.Date) data[0]).toLocalDate();
+            LocalDate fecha;
+            if (data[0] instanceof java.sql.Date) {
+                fecha = ((java.sql.Date) data[0]).toLocalDate();
+            } else if (data[0] instanceof java.sql.Timestamp) {
+                fecha = ((java.sql.Timestamp) data[0]).toLocalDateTime().toLocalDate();
+            } else if (data[0] instanceof java.time.LocalDate) {
+                fecha = (LocalDate) data[0];
+            } else {
+                fecha = LocalDate.parse(data[0].toString());
+            }
             Long cantidad = ((Number) data[1]).longValue();
             String mes = fecha.format(DateTimeFormatter.ofPattern("yyyy-MM"));
             mesMap.put(mes, mesMap.getOrDefault(mes, 0L) + cantidad);

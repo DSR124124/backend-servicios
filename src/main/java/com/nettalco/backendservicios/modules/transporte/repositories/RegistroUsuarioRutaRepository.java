@@ -42,7 +42,7 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
     );
     
     // Consultas para estadísticas
-    @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE DATE(r.fechaRegistro) = CURRENT_DATE")
+    @Query(value = "SELECT COUNT(*) FROM registros_usuarios_rutas WHERE DATE(fecha_registro) = CURRENT_DATE", nativeQuery = true)
     Long countRegistrosHoy();
     
     @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE r.fechaRegistro >= :fechaInicio")
@@ -63,11 +63,11 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
            "ORDER BY cantidad DESC")
     List<Object[]> countRegistrosPorUsuario();
     
-    @Query("SELECT DATE(r.fechaRegistro) as fecha, COUNT(r) as cantidad " +
-           "FROM RegistroUsuarioRuta r " +
-           "WHERE r.fechaRegistro >= :fechaInicio " +
-           "GROUP BY DATE(r.fechaRegistro) " +
-           "ORDER BY fecha DESC")
+    @Query(value = "SELECT DATE(fecha_registro) as fecha, COUNT(*) as cantidad " +
+           "FROM registros_usuarios_rutas " +
+           "WHERE fecha_registro >= :fechaInicio " +
+           "GROUP BY DATE(fecha_registro) " +
+           "ORDER BY fecha DESC", nativeQuery = true)
     List<Object[]> countRegistrosPorDia(@Param("fechaInicio") OffsetDateTime fechaInicio);
 }
 
