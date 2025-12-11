@@ -3,60 +3,59 @@ package com.nettalco.backendservicios.modules.transporte.dtos;
 import java.util.List;
 
 /**
- * DTO para estadísticas de registros de usuarios rutas
+ * DTO para estadísticas de aglomeración - Análisis de flujo de personas
  */
 public record EstadisticasRegistrosResponse(
     // KPIs principales
-    Long totalRegistros,
-    Long registrosHoy,
-    Long registrosEstaSemana,
-    Long registrosEsteMes,
+    Long totalPersonasRegistradas,
+    Long personasRegistradasHoy,
     
-    // Estadísticas por ruta
-    List<RegistroPorRuta> registrosPorRuta,
+    // 1. MAPA DE CALOR (Heatmap): Hora vs Paradero
+    List<DatoHeatmap> datosHeatmap,
     
-    // Estadísticas por paradero
-    List<RegistroPorParadero> registrosPorParadero,
+    // 2. GRÁFICO DE BARRAS APILADAS: Ruta con segmentos por Paradero
+    List<DatoStackedBar> datosStackedBar,
     
-    // Estadísticas temporales
-    List<RegistroPorFecha> registrosPorDia,
-    List<RegistroPorFecha> registrosPorSemana,
-    List<RegistroPorFecha> registrosPorMes,
-    
-    // Top usuarios
-    List<RegistroPorUsuario> topUsuarios,
-    
-    // Estadísticas generales
-    Double promedioRegistrosPorDia,
-    Integer rutasMasUsadas,
-    Integer paraderosMasUsados
+    // 3. GRÁFICO DE LÍNEAS MULTISERIE: Hora vs Cantidad por Ruta
+    List<DatoLineChart> datosLineChart
 ) {
-    public record RegistroPorRuta(
-        Integer idRuta,
-        String nombreRuta,
-        Long cantidadRegistros,
-        Double porcentaje
-    ) {}
-    
-    public record RegistroPorParadero(
+    /**
+     * Datos para Heatmap: Hora del día vs Paradero
+     */
+    public record DatoHeatmap(
+        Integer hora,           // 0-23
         Integer idParadero,
         String nombreParadero,
+        Long cantidadUsuarios
+    ) {}
+    
+    /**
+     * Datos para Stacked Bar: Ruta con segmentos por Paradero
+     */
+    public record DatoStackedBar(
         Integer idRuta,
         String nombreRuta,
-        Long cantidadRegistros,
-        Double porcentaje
-    ) {}
+        List<SegmentoParadero> segmentosParaderos,
+        Long totalUsuarios
+    ) {
+        public record SegmentoParadero(
+            Integer idParadero,
+            String nombreParadero,
+            Long cantidadUsuarios
+        ) {}
+    }
     
-    public record RegistroPorFecha(
-        String fecha,
-        String periodo, // "dia", "semana", "mes"
-        Long cantidadRegistros
-    ) {}
-    
-    public record RegistroPorUsuario(
-        Integer idUsuario,
-        Long cantidadRegistros,
-        Double porcentaje
-    ) {}
+    /**
+     * Datos para Line Chart: Hora vs Cantidad por Ruta
+     */
+    public record DatoLineChart(
+        Integer hora,           // 0-23
+        List<ValorPorRuta> valoresPorRuta
+    ) {
+        public record ValorPorRuta(
+            Integer idRuta,
+            String nombreRuta,
+            Long cantidadUsuarios
+        ) {}
+    }
 }
-

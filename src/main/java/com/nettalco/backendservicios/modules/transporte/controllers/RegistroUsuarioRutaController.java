@@ -70,39 +70,6 @@ public class RegistroUsuarioRutaController {
         }
     }
     
-    @GetMapping("/admin/todos")
-    public ResponseEntity<?> listarTodosLosRegistros() {
-        try {
-            java.util.List<RegistroUsuarioRutaResponse> registros = registroService.listarTodosLosRegistros();
-            return ResponseEntity.ok(registros);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al listar los registros: " + e.getMessage()));
-        }
-    }
-    
-    @GetMapping("/admin/usuario/{idUsuario}")
-    public ResponseEntity<?> listarRegistrosPorUsuario(@PathVariable Integer idUsuario) {
-        try {
-            java.util.List<RegistroUsuarioRutaResponse> registros = registroService.listarRegistrosPorUsuario(idUsuario);
-            return ResponseEntity.ok(registros);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al listar los registros del usuario: " + e.getMessage()));
-        }
-    }
-    
-    @GetMapping("/admin/ruta/{idRuta}")
-    public ResponseEntity<?> listarRegistrosPorRuta(@PathVariable Integer idRuta) {
-        try {
-            java.util.List<RegistroUsuarioRutaResponse> registros = registroService.listarRegistrosPorRuta(idRuta);
-            return ResponseEntity.ok(registros);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Error al listar los registros de la ruta: " + e.getMessage()));
-        }
-    }
-    
     @GetMapping("/admin/estadisticas")
     public ResponseEntity<?> obtenerEstadisticas() {
         try {

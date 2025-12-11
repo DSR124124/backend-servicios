@@ -6,28 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
 public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsuarioRuta, Integer> {
     
-    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
-    List<RegistroUsuarioRuta> findByUsuarioIdOrderByFechaDesc(@Param("idUsuario") Integer idUsuario);
-    
-    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.ruta.idRuta = :idRuta ORDER BY r.fechaRegistro DESC")
-    List<RegistroUsuarioRuta> findByRutaIdOrderByFechaDesc(@Param("idRuta") Integer idRuta);
-    
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.paradero.idPunto = :idParadero ORDER BY r.fechaRegistro DESC")
     List<RegistroUsuarioRuta> findByParaderoIdOrderByFechaDesc(@Param("idParadero") Integer idParadero);
-    
-    @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario " +
-           "AND r.fechaRegistro >= :fechaDesde AND r.fechaRegistro <= :fechaHasta")
-    Long countByUsuarioAndFechaBetween(
-        @Param("idUsuario") Integer idUsuario,
-        @Param("fechaDesde") OffsetDateTime fechaDesde,
-        @Param("fechaHasta") OffsetDateTime fechaHasta
-    );
     
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
     java.util.List<RegistroUsuarioRuta> findUltimosRegistrosByUsuarioId(@Param("idUsuario") Integer idUsuario);
@@ -45,29 +30,39 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
     @Query(value = "SELECT COUNT(*) FROM registros_usuarios_rutas WHERE DATE(fecha_registro) = CURRENT_DATE", nativeQuery = true)
     Long countRegistrosHoy();
     
-    @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE r.fechaRegistro >= :fechaInicio")
-    Long countRegistrosDesde(@Param("fechaInicio") OffsetDateTime fechaInicio);
+    // 1. HEATMAP: Hora del día vs Paradero
+    @Query(value = "SELECT EXTRACT(HOUR FROM fecha_registro) as hora, " +
+           "r.id_punto as id_paradero, " +
+           "COALESCE(r.nombre_paradero, 'Paradero ' || r.orden) as nombre_paradero, " +
+           "COUNT(DISTINCT rur.id_usuario) as cantidad_usuarios " +
+           "FROM registros_usuarios_rutas rur " +
+           "JOIN ruta_puntos r ON rur.id_paradero = r.id_punto " +
+           "GROUP BY EXTRACT(HOUR FROM fecha_registro), r.id_punto, r.nombre_paradero, r.orden " +
+           "ORDER BY hora, id_paradero", nativeQuery = true)
+    List<Object[]> obtenerDatosHeatmap();
     
-    @Query("SELECT r.ruta.idRuta, r.ruta.nombre, COUNT(r) as cantidad " +
-           "FROM RegistroUsuarioRuta r GROUP BY r.ruta.idRuta, r.ruta.nombre " +
-           "ORDER BY cantidad DESC")
-    List<Object[]> countRegistrosPorRuta();
+    // 2. STACKED BAR: Ruta con segmentos por Paradero
+    @Query(value = "SELECT rt.id_ruta, " +
+           "rt.nombre as nombre_ruta, " +
+           "r.id_punto as id_paradero, " +
+           "COALESCE(r.nombre_paradero, 'Paradero ' || r.orden) as nombre_paradero, " +
+           "COUNT(DISTINCT rur.id_usuario) as cantidad_usuarios " +
+           "FROM registros_usuarios_rutas rur " +
+           "JOIN rutas rt ON rur.id_ruta = rt.id_ruta " +
+           "JOIN ruta_puntos r ON rur.id_paradero = r.id_punto " +
+           "GROUP BY rt.id_ruta, rt.nombre, r.id_punto, r.nombre_paradero, r.orden " +
+           "ORDER BY rt.id_ruta, r.id_punto", nativeQuery = true)
+    List<Object[]> obtenerDatosStackedBar();
     
-    @Query("SELECT r.paradero.idPunto, r.paradero.nombreParadero, r.ruta.idRuta, r.ruta.nombre, COUNT(r) as cantidad " +
-           "FROM RegistroUsuarioRuta r GROUP BY r.paradero.idPunto, r.paradero.nombreParadero, r.ruta.idRuta, r.ruta.nombre " +
-           "ORDER BY cantidad DESC")
-    List<Object[]> countRegistrosPorParadero();
-    
-    @Query("SELECT r.idUsuario, COUNT(r) as cantidad " +
-           "FROM RegistroUsuarioRuta r GROUP BY r.idUsuario " +
-           "ORDER BY cantidad DESC")
-    List<Object[]> countRegistrosPorUsuario();
-    
-    @Query(value = "SELECT DATE(fecha_registro) as fecha, COUNT(*) as cantidad " +
-           "FROM registros_usuarios_rutas " +
-           "WHERE fecha_registro >= :fechaInicio " +
-           "GROUP BY DATE(fecha_registro) " +
-           "ORDER BY fecha DESC", nativeQuery = true)
-    List<Object[]> countRegistrosPorDia(@Param("fechaInicio") OffsetDateTime fechaInicio);
+    // 3. LINE CHART: Hora vs Cantidad por Ruta
+    @Query(value = "SELECT EXTRACT(HOUR FROM fecha_registro) as hora, " +
+           "rt.id_ruta, " +
+           "rt.nombre as nombre_ruta, " +
+           "COUNT(DISTINCT rur.id_usuario) as cantidad_usuarios " +
+           "FROM registros_usuarios_rutas rur " +
+           "JOIN rutas rt ON rur.id_ruta = rt.id_ruta " +
+           "GROUP BY EXTRACT(HOUR FROM fecha_registro), rt.id_ruta, rt.nombre " +
+           "ORDER BY hora, rt.id_ruta", nativeQuery = true)
+    List<Object[]> obtenerDatosLineChart();
 }
 
