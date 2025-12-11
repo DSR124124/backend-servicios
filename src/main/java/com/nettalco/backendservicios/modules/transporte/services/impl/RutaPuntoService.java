@@ -4,6 +4,7 @@ import com.nettalco.backendservicios.modules.transporte.dtos.RutaPuntoRequest;
 import com.nettalco.backendservicios.modules.transporte.dtos.RutaPuntoResponse;
 import com.nettalco.backendservicios.modules.transporte.entities.Ruta;
 import com.nettalco.backendservicios.modules.transporte.entities.RutaPunto;
+import com.nettalco.backendservicios.modules.transporte.repositories.RegistroUsuarioRutaRepository;
 import com.nettalco.backendservicios.modules.transporte.repositories.RutaPuntoRepository;
 import com.nettalco.backendservicios.modules.transporte.repositories.RutaRepository;
 import com.nettalco.backendservicios.modules.transporte.services.IRutaPuntoService;
@@ -24,6 +25,9 @@ public class RutaPuntoService implements IRutaPuntoService {
     
     @Autowired
     private RutaRepository rutaRepository;
+    
+    @Autowired
+    private RegistroUsuarioRutaRepository registroUsuarioRutaRepository;
     
     @Override
     public RutaPuntoResponse crearRutaPunto(RutaPuntoRequest request) {
@@ -83,6 +87,21 @@ public class RutaPuntoService implements IRutaPuntoService {
         if (!rutaPuntoRepository.existsById(id)) {
             throw new IllegalArgumentException("Punto de ruta no encontrado con ID: " + id);
         }
+        
+        // Verificar si hay registros de usuarios que referencian este punto
+        List<?> registrosReferenciados = registroUsuarioRutaRepository.findByParaderoIdOrderByFechaDesc(id);
+        
+        if (!registrosReferenciados.isEmpty()) {
+            int cantidadRegistros = registrosReferenciados.size();
+            throw new IllegalArgumentException(
+                String.format(
+                    "No se puede eliminar el punto de ruta porque tiene %d registro(s) de usuario(s) asociado(s). " +
+                    "Debe eliminar primero los registros relacionados o contactar al administrador.",
+                    cantidadRegistros
+                )
+            );
+        }
+        
         rutaPuntoRepository.deleteById(id);
     }
     
