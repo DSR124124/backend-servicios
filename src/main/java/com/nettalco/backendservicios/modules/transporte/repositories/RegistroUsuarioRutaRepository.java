@@ -11,20 +11,11 @@ import java.util.List;
 @Repository
 public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsuarioRuta, Integer> {
     
+    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
+    java.util.List<RegistroUsuarioRuta> findAllByUsuarioId(@Param("idUsuario") Integer idUsuario);
+    
     @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.paradero.idPunto = :idParadero ORDER BY r.fechaRegistro DESC")
     List<RegistroUsuarioRuta> findByParaderoIdOrderByFechaDesc(@Param("idParadero") Integer idParadero);
-    
-    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario ORDER BY r.fechaRegistro DESC")
-    java.util.List<RegistroUsuarioRuta> findUltimosRegistrosByUsuarioId(@Param("idUsuario") Integer idUsuario);
-    
-    @Query("SELECT r FROM RegistroUsuarioRuta r WHERE r.idUsuario = :idUsuario " +
-           "AND r.ruta.idRuta = :idRuta AND r.paradero.idPunto = :idParadero " +
-           "ORDER BY r.fechaRegistro DESC")
-    java.util.List<RegistroUsuarioRuta> findRegistrosExistentes(
-        @Param("idUsuario") Integer idUsuario,
-        @Param("idRuta") Integer idRuta,
-        @Param("idParadero") Integer idParadero
-    );
     
     // Consultas para estadísticas
     @Query(value = "SELECT COUNT(*) FROM registros_usuarios_rutas WHERE DATE(fecha_registro) = CURRENT_DATE", nativeQuery = true)

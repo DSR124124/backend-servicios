@@ -46,19 +46,29 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             throw new IllegalArgumentException("El paradero no pertenece a la ruta seleccionada");
         }
         
-        java.util.List<RegistroUsuarioRuta> registrosExistentes = registroRepository.findRegistrosExistentes(
-            idUsuario, 
-            request.getIdRuta(), 
-            request.getIdParadero()
-        );
-        RegistroUsuarioRuta registro = registrosExistentes.isEmpty() 
-            ? new RegistroUsuarioRuta() 
-            : registrosExistentes.get(0);
+        // Obtener todos los registros del usuario
+        java.util.List<RegistroUsuarioRuta> registrosUsuario = registroRepository.findAllByUsuarioId(idUsuario);
         
-        if (registro.getIdRegistro() == null) {
+        RegistroUsuarioRuta registro;
+        boolean esActualizacion = false;
+        
+        if (!registrosUsuario.isEmpty()) {
+            // Usar el último registro del usuario y actualizarlo
+            registro = registrosUsuario.get(0);
+            esActualizacion = true;
+            
+            // Eliminar duplicados (todos los demás registros del usuario)
+            if (registrosUsuario.size() > 1) {
+                java.util.List<RegistroUsuarioRuta> duplicados = registrosUsuario.subList(1, registrosUsuario.size());
+                registroRepository.deleteAll(duplicados);
+            }
+        } else {
+            // Si no existe ningún registro, crear uno nuevo
+            registro = new RegistroUsuarioRuta();
             registro.setIdUsuario(idUsuario);
         }
         
+        // Actualizar los campos del registro (ruta y paradero pueden cambiar)
         registro.setRuta(ruta);
         registro.setParadero(paradero);
         registro.setFechaRegistro(OffsetDateTime.now());
@@ -66,9 +76,9 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
         
         RegistroUsuarioRuta registroGuardado = registroRepository.save(registro);
         
-        String mensaje = registro.getIdRegistro() == null 
-            ? "Registro de ruta y paradero guardado exitosamente"
-            : "Registro de ruta y paradero actualizado exitosamente";
+        String mensaje = esActualizacion
+            ? "Registro de ruta y paradero actualizado exitosamente"
+            : "Registro de ruta y paradero guardado exitosamente";
         
         return new RegistroUsuarioRutaResponse(
             registroGuardado.getIdRegistro(),
@@ -80,31 +90,6 @@ public class RegistroUsuarioRutaService implements IRegistroUsuarioRutaService {
             registroGuardado.getFechaRegistro(),
             mensaje
         );
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public java.util.Optional<RegistroUsuarioRutaResponse> obtenerUltimoRegistro(Integer idUsuario) {
-        java.util.List<RegistroUsuarioRuta> registros = registroRepository.findUltimosRegistrosByUsuarioId(idUsuario);
-        
-        if (registros.isEmpty()) {
-            return java.util.Optional.empty();
-        }
-        
-        RegistroUsuarioRuta registro = registros.get(0);
-        Ruta ruta = registro.getRuta();
-        RutaPunto paradero = registro.getParadero();
-        
-        return java.util.Optional.of(new RegistroUsuarioRutaResponse(
-            registro.getIdRegistro(),
-            registro.getIdUsuario(),
-            ruta.getIdRuta(),
-            ruta.getNombre(),
-            paradero.getIdPunto(),
-            paradero.getNombreParadero() != null ? paradero.getNombreParadero() : "Paradero " + paradero.getOrden(),
-            registro.getFechaRegistro(),
-            "Último registro encontrado"
-        ));
     }
     
     @Override
