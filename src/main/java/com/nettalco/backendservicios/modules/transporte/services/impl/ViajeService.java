@@ -2,6 +2,7 @@ package com.nettalco.backendservicios.modules.transporte.services.impl;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.*;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse.RoutePointResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConUbicacionResponse;
 import com.nettalco.backendservicios.modules.transporte.entities.*;
 import com.nettalco.backendservicios.modules.transporte.repositories.*;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;
@@ -138,6 +139,56 @@ public class ViajeService implements IViajeService {
             viaje.getFechaInicioProgramada(),
             viaje.getFechaFinProgramada()
         );
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<ViajeActivoConUbicacionResponse> obtenerTodosLosViajesActivosConUbicacion() {
+        // Obtener todos los viajes en curso
+        List<Viaje> viajes = viajeRepository.findByEstado("en_curso");
+        
+        return viajes.stream()
+            .map(viaje -> {
+                // Obtener ubicación actual del viaje
+                Optional<BusLocationResponse> ubicacionOpt = obtenerUbicacionActual(viaje.getIdViaje());
+                
+                String busPlate = viaje.getBus() != null ? viaje.getBus().getPlaca() : "";
+                String busModel = viaje.getBus() != null ? viaje.getBus().getModelo() : null;
+                String nombreRuta = viaje.getRuta() != null ? viaje.getRuta().getNombre() : "";
+                
+                String driverName = "Conductor " + viaje.getIdConductor();
+                if (viaje.getIdConductor() != null) {
+                    Optional<ConductorDetalle> conductorOpt = conductorDetalleRepository
+                        .findByIdUsuarioGestion(viaje.getIdConductor());
+                    if (conductorOpt.isPresent()) {
+                        ConductorDetalle conductor = conductorOpt.get();
+                        if (conductor.getLicenciaNumero() != null && !conductor.getLicenciaNumero().isEmpty()) {
+                            driverName = "Conductor " + conductor.getLicenciaNumero();
+                        }
+                    }
+                }
+                
+                BusLocationResponse ubicacion = ubicacionOpt.orElse(null);
+                
+                return new ViajeActivoConUbicacionResponse(
+                    viaje.getIdViaje(),
+                    viaje.getRuta() != null ? viaje.getRuta().getIdRuta() : null,
+                    nombreRuta,
+                    busPlate,
+                    busModel,
+                    driverName,
+                    viaje.getEstado() != null ? viaje.getEstado() : "desconocido",
+                    viaje.getFechaInicioProgramada(),
+                    viaje.getFechaFinProgramada(),
+                    ubicacion != null ? ubicacion.latitude() : null,
+                    ubicacion != null ? ubicacion.longitude() : null,
+                    ubicacion != null ? ubicacion.heading() : null,
+                    ubicacion != null ? ubicacion.speed() : null,
+                    ubicacion != null ? ubicacion.timestamp() : null
+                );
+            })
+            .filter(viaje -> viaje.latitude() != null && viaje.longitude() != null) // Solo viajes con ubicación
+            .collect(Collectors.toList());
     }
     
     // =====================================================

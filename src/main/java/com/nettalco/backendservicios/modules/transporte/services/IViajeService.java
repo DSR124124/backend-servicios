@@ -9,6 +9,7 @@ import com.nettalco.backendservicios.modules.transporte.dtos.LlegadaParaderoResp
 import com.nettalco.backendservicios.modules.transporte.dtos.ProximoParaderoResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConductorResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConUbicacionResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeConductorResponse;
 
@@ -32,6 +33,11 @@ public interface IViajeService {
      * Obtiene los viajes activos (en_curso o programados) para una ruta especifica
      */
     List<ViajeActivoResponse> obtenerViajesActivosPorRuta(Integer idRuta);
+    
+    /**
+     * Obtiene todos los viajes activos (en_curso) con sus ubicaciones en tiempo real
+     */
+    List<ViajeActivoConUbicacionResponse> obtenerTodosLosViajesActivosConUbicacion();
     
     // =====================================================
     // Metodos para el modulo de conductores

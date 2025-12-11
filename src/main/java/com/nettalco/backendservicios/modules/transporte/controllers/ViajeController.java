@@ -2,6 +2,7 @@ package com.nettalco.backendservicios.modules.transporte.controllers;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.BusLocationResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.TripDetailResponse;
+import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoConUbicacionResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoResponse;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,21 @@ public class ViajeController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Error al obtener viajes activos: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtiene todos los viajes activos con sus ubicaciones en tiempo real
+     * Endpoint: GET /api/trips/activos/ubicaciones
+     */
+    @GetMapping("/activos/ubicaciones")
+    public ResponseEntity<?> obtenerTodosLosViajesActivosConUbicacion() {
+        try {
+            List<ViajeActivoConUbicacionResponse> viajes = viajeService.obtenerTodosLosViajesActivosConUbicacion();
+            return ResponseEntity.ok(viajes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener viajes activos con ubicaciones: " + e.getMessage()));
         }
     }
 }
