@@ -72,20 +72,15 @@ public class SecurityConfig {
     
     /**
      * Configuracion de CORS para permitir peticiones desde Flutter y web
+     * Usa patterns para permitir todos los orígenes (incluyendo localhost para desarrollo)
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Permitir orígenes específicos incluyendo localhost para desarrollo
-        // Nota: Si necesitas permitir todos los orígenes, usa setAllowedOriginPatterns en su lugar
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:4200",
-            "http://localhost:4201",
-            "http://127.0.0.1:4200",
-            "http://127.0.0.1:4201",
-            "https://edugen.brianuceda.xyz"
-        ));
+        // Permitir todos los orígenes usando patterns (compatible con allowCredentials false)
+        // Esto permite tanto localhost como dominios de producción sin necesidad de actualizar la lista
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
         // Métodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
