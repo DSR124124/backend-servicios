@@ -1,5 +1,6 @@
 package com.nettalco.backendservicios.modules.transporte.services;
 
+import com.nettalco.backendservicios.modules.transporte.dtos.EstadisticasRegistrosResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.RegistroUsuarioRutaRequest;
 import com.nettalco.backendservicios.modules.transporte.dtos.RegistroUsuarioRutaResponse;
 
@@ -12,5 +13,6 @@ public interface IRegistroUsuarioRutaService {
     List<RegistroUsuarioRutaResponse> listarTodosLosRegistros();
     List<RegistroUsuarioRutaResponse> listarRegistrosPorUsuario(Integer idUsuario);
     List<RegistroUsuarioRutaResponse> listarRegistrosPorRuta(Integer idRuta);
+    EstadisticasRegistrosResponse obtenerEstadisticas();
 }
 

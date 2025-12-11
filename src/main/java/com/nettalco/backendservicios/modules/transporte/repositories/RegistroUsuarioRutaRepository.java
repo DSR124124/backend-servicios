@@ -40,5 +40,34 @@ public interface RegistroUsuarioRutaRepository extends JpaRepository<RegistroUsu
         @Param("idRuta") Integer idRuta,
         @Param("idParadero") Integer idParadero
     );
+    
+    // Consultas para estadísticas
+    @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE DATE(r.fechaRegistro) = CURRENT_DATE")
+    Long countRegistrosHoy();
+    
+    @Query("SELECT COUNT(r) FROM RegistroUsuarioRuta r WHERE r.fechaRegistro >= :fechaInicio")
+    Long countRegistrosDesde(@Param("fechaInicio") OffsetDateTime fechaInicio);
+    
+    @Query("SELECT r.ruta.idRuta, r.ruta.nombre, COUNT(r) as cantidad " +
+           "FROM RegistroUsuarioRuta r GROUP BY r.ruta.idRuta, r.ruta.nombre " +
+           "ORDER BY cantidad DESC")
+    List<Object[]> countRegistrosPorRuta();
+    
+    @Query("SELECT r.paradero.idPunto, r.paradero.nombreParadero, r.ruta.idRuta, r.ruta.nombre, COUNT(r) as cantidad " +
+           "FROM RegistroUsuarioRuta r GROUP BY r.paradero.idPunto, r.paradero.nombreParadero, r.ruta.idRuta, r.ruta.nombre " +
+           "ORDER BY cantidad DESC")
+    List<Object[]> countRegistrosPorParadero();
+    
+    @Query("SELECT r.idUsuario, COUNT(r) as cantidad " +
+           "FROM RegistroUsuarioRuta r GROUP BY r.idUsuario " +
+           "ORDER BY cantidad DESC")
+    List<Object[]> countRegistrosPorUsuario();
+    
+    @Query("SELECT DATE(r.fechaRegistro) as fecha, COUNT(r) as cantidad " +
+           "FROM RegistroUsuarioRuta r " +
+           "WHERE r.fechaRegistro >= :fechaInicio " +
+           "GROUP BY DATE(r.fechaRegistro) " +
+           "ORDER BY fecha DESC")
+    List<Object[]> countRegistrosPorDia(@Param("fechaInicio") OffsetDateTime fechaInicio);
 }
 

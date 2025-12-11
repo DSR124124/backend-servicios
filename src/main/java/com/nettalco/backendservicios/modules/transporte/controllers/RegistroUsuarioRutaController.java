@@ -102,5 +102,17 @@ public class RegistroUsuarioRutaController {
                 .body(Map.of("error", "Error al listar los registros de la ruta: " + e.getMessage()));
         }
     }
+    
+    @GetMapping("/admin/estadisticas")
+    public ResponseEntity<?> obtenerEstadisticas() {
+        try {
+            com.nettalco.backendservicios.modules.transporte.dtos.EstadisticasRegistrosResponse estadisticas = 
+                registroService.obtenerEstadisticas();
+            return ResponseEntity.ok(estadisticas);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Error al obtener las estadísticas: " + e.getMessage()));
+        }
+    }
 }
 
