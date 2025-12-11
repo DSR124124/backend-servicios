@@ -1,14 +1,10 @@
 package com.nettalco.backendservicios.modules.transporte.services.impl;
 
 import com.nettalco.backendservicios.modules.transporte.dtos.CrearRutaRequest;
-import com.nettalco.backendservicios.modules.transporte.dtos.PuntoRutaDto;
 import com.nettalco.backendservicios.modules.transporte.dtos.RutaDetalleCompletoResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.RutaResponse;
 import com.nettalco.backendservicios.modules.transporte.dtos.ViajeActivoResponse;
-import com.nettalco.backendservicios.modules.transporte.entities.Bus;
 import com.nettalco.backendservicios.modules.transporte.entities.Ruta;
-import com.nettalco.backendservicios.modules.transporte.entities.RutaPunto;
-import com.nettalco.backendservicios.modules.transporte.repositories.BusRepository;
 import com.nettalco.backendservicios.modules.transporte.repositories.RutaRepository;
 import com.nettalco.backendservicios.modules.transporte.services.IRutaService;
 import com.nettalco.backendservicios.modules.transporte.services.IViajeService;
@@ -28,44 +24,24 @@ public class RutaService implements IRutaService {
     private RutaRepository rutaRepository;
     
     @Autowired
-    private BusRepository busRepository;
-    
-    @Autowired
     private IViajeService viajeService;
     
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RutaResponse crearRuta(CrearRutaRequest request) {
-        // Validar que el bus existe
-        Bus bus = busRepository.findById(request.idVehiculoDefault())
-            .orElseThrow(() -> new IllegalArgumentException("El vehiculo con ID " + request.idVehiculoDefault() + " no existe"));
-        
         // Validar que el nombre de la ruta no este duplicado
         if (rutaRepository.existsByNombre(request.nombre())) {
             throw new IllegalArgumentException("Ya existe una ruta con el nombre: " + request.nombre());
         }
         
-        // Crear la entidad Ruta
+        // Crear la entidad Ruta (solo con los campos de la tabla rutas)
         Ruta ruta = new Ruta();
         ruta.setNombre(request.nombre());
         ruta.setDescripcion(request.descripcion());
         ruta.setColorMapa(request.colorMapa() != null ? request.colorMapa() : "#0000FF");
         ruta.setEstado(true);
         
-        // Crear y asociar los puntos de la ruta
-        for (PuntoRutaDto puntoDto : request.puntos()) {
-            RutaPunto punto = new RutaPunto();
-            punto.setRuta(ruta);
-            punto.setOrden(puntoDto.orden());
-            punto.setLatitud(puntoDto.latitud());
-            punto.setLongitud(puntoDto.longitud());
-            punto.setNombreParadero(puntoDto.nombreParadero());
-            punto.setEsParaderoOficial(puntoDto.esParaderoOficial() != null ? puntoDto.esParaderoOficial() : false);
-            
-            ruta.addPunto(punto);
-        }
-        
-        // Guardar la ruta y sus puntos en una sola transaccion
+        // Guardar la ruta (los puntos se gestionan por separado usando RutaPuntoService)
         Ruta rutaGuardada = rutaRepository.save(ruta);
         
         // Retornar el DTO de respuesta
@@ -107,32 +83,13 @@ public class RutaService implements IRutaService {
             throw new IllegalArgumentException("Ya existe una ruta con el nombre: " + request.nombre());
         }
         
-        // Validar que el bus existe
-        Bus bus = busRepository.findById(request.idVehiculoDefault())
-            .orElseThrow(() -> new IllegalArgumentException("El vehiculo con ID " + request.idVehiculoDefault() + " no existe"));
-        
-        // Actualizar datos basicos
+        // Actualizar solo los campos básicos de la tabla rutas
         ruta.setNombre(request.nombre());
         ruta.setDescripcion(request.descripcion());
         if (request.colorMapa() != null) {
             ruta.setColorMapa(request.colorMapa());
         }
-        
-        // Eliminar puntos existentes
-        ruta.getPuntos().clear();
-        
-        // Agregar nuevos puntos
-        for (PuntoRutaDto puntoDto : request.puntos()) {
-            RutaPunto punto = new RutaPunto();
-            punto.setRuta(ruta);
-            punto.setOrden(puntoDto.orden());
-            punto.setLatitud(puntoDto.latitud());
-            punto.setLongitud(puntoDto.longitud());
-            punto.setNombreParadero(puntoDto.nombreParadero());
-            punto.setEsParaderoOficial(puntoDto.esParaderoOficial() != null ? puntoDto.esParaderoOficial() : false);
-            
-            ruta.addPunto(punto);
-        }
+        // Los puntos se gestionan por separado usando RutaPuntoService
         
         Ruta rutaActualizada = rutaRepository.save(ruta);
         return convertirARutaResponse(rutaActualizada);
